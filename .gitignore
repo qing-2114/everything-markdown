@@ -1,0 +1,12 @@
+node_modules/
+*.log
+dist/
+out/
+build/
+release/
+.DS_Store
+__pycache__/
+*.pyc
+.agents/
+.codex/
+output/

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>everything-markdown</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-labelledby="appTitle">
+        <div class="title-lockup">
+          <div class="brand-mark" aria-hidden="true">MD</div>
+          <div>
+            <h1 id="appTitle">everything-markdown</h1>
+          </div>
+        </div>
+        <div class="status-pill" id="statusPill" aria-live="polite">等待文件</div>
+      </section>
+
+      <section class="workspace" aria-label="Markdown 转换工作台">
+        <div class="conversion-grid">
+          <div class="drop-zone" id="fileDropZone">
+            <div class="file-icon" id="fileIcon" aria-hidden="true">FILE</div>
+            <div class="file-copy">
+              <span class="section-label">源文件</span>
+              <h2 id="fileTitle">选择一个文件开始转换</h2>
+              <p id="fileMeta">支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。</p>
+              <button class="primary-button" id="selectFileButton" type="button">选择文件</button>
+            </div>
+          </div>
+
+          <aside class="side-panel" aria-label="转换设置">
+            <div class="settings-row">
+              <div class="setting-copy">
+                <span>输出位置</span>
+                <strong id="outputDirText">尚未选择保存位置</strong>
+              </div>
+              <button class="secondary-button" id="selectOutputButton" type="button">选择文件夹</button>
+            </div>
+
+            <div class="action-row">
+              <button class="convert-button" id="convertButton" type="button" disabled>
+                <span id="convertButtonText">转换为 Markdown</span>
+              </button>
+              <p id="hintText">请先选择文件和输出位置。</p>
+            </div>
+
+            <div class="format-strip" aria-label="支持的格式">
+              <span>PDF</span>
+              <span>DOCX</span>
+              <span>PPTX</span>
+              <span>XLSX</span>
+              <span>HTML</span>
+              <span>CSV</span>
+              <span>JSON</span>
+              <span>XML</span>
+              <span>TXT</span>
+            </div>
+          </aside>
+        </div>
+
+        <div class="result-panel" id="resultPanel" hidden>
+          <div>
+            <p class="result-label" id="resultLabel">转换结果</p>
+            <strong id="resultPath"></strong>
+          </div>
+          <button class="secondary-button" id="openLocationButton" type="button" hidden>打开文件所在位置</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
