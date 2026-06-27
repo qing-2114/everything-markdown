@@ -20,13 +20,25 @@
 
       <section class="workspace" aria-label="Markdown 转换工作台">
         <div class="conversion-grid">
-          <div class="drop-zone" id="fileDropZone">
-            <div class="file-icon" id="fileIcon" aria-hidden="true">FILE</div>
-            <div class="file-copy">
-              <span class="section-label">源文件</span>
-              <h2 id="fileTitle">选择一个文件开始转换</h2>
-              <p id="fileMeta">支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。</p>
-              <button class="primary-button" id="selectFileButton" type="button">选择文件</button>
+          <div class="queue-panel">
+            <div class="drop-zone" id="fileDropZone">
+              <div class="file-icon" id="fileIcon" aria-hidden="true">FILES</div>
+              <div class="file-copy">
+                <span class="section-label">源文件队列</span>
+                <h2 id="fileTitle">选择或拖入多个文件开始转换</h2>
+                <p id="fileMeta">支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。</p>
+                <button class="primary-button" id="selectFileButton" type="button">选择文件</button>
+              </div>
+            </div>
+
+            <div class="queue-list-shell">
+              <div class="queue-list-header">
+                <span>文件队列</span>
+                <button class="text-button" id="clearQueueButton" type="button" disabled>清空队列</button>
+              </div>
+              <div class="queue-list" id="queueList" aria-live="polite">
+                <p class="empty-queue">还没有文件。你可以点击选择文件，或把文件拖到上方区域。</p>
+              </div>
             </div>
           </div>
 
@@ -40,10 +52,11 @@
             </div>
 
             <div class="action-row">
+              <div class="progress-summary" id="progressSummary">0 个文件等待转换</div>
               <button class="convert-button" id="convertButton" type="button" disabled>
                 <span id="convertButtonText">转换为 Markdown</span>
               </button>
-              <p id="hintText">请先选择文件和输出位置。</p>
+              <p id="hintText">先添加文件，再选择 Markdown 的保存位置。</p>
             </div>
 
             <div class="format-strip" aria-label="支持的格式">
@@ -65,11 +78,12 @@
             <p class="result-label" id="resultLabel">转换结果</p>
             <strong id="resultPath"></strong>
           </div>
-          <button class="secondary-button" id="openLocationButton" type="button" hidden>打开文件所在位置</button>
+          <button class="secondary-button" id="openLocationButton" type="button" hidden>打开输出目录</button>
         </div>
       </section>
     </main>
 
+    <script src="../queue-utils.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

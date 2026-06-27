@@ -42,6 +42,10 @@ function getBundledConverterPath() {
   return path.join(process.resourcesPath, "converter", executableName);
 }
 
+function getErrorMessage(error, fallback) {
+  return error?.message || fallback;
+}
+
 function runConverter(inputPath, outputPath) {
   return new Promise((resolve) => {
     const bundledConverterPath = getBundledConverterPath();
@@ -118,25 +122,25 @@ ipcMain.handle("get-app-state", () => {
   };
 });
 
-ipcMain.handle("get-file-info", (_event, filePath) => {
-  if (!filePath || !fs.existsSync(filePath)) {
-    return null;
+ipcMain.handle("get-files-info", (_event, filePaths) => {
+  if (!Array.isArray(filePaths)) {
+    return [];
   }
 
-  return getFileInfo(filePath);
+  return filePaths.filter((filePath) => filePath && fs.existsSync(filePath)).map((filePath) => getFileInfo(filePath));
 });
 
-ipcMain.handle("select-input-file", async () => {
+ipcMain.handle("select-input-files", async () => {
   const result = await dialog.showOpenDialog({
-    properties: ["openFile"],
+    properties: ["openFile", "multiSelections"],
     filters: [{ name: "All Files", extensions: ["*"] }],
   });
 
   if (result.canceled || result.filePaths.length === 0) {
-    return null;
+    return [];
   }
 
-  return getFileInfo(result.filePaths[0]);
+  return result.filePaths.map((filePath) => getFileInfo(filePath));
 });
 
 ipcMain.handle("select-output-directory", async () => {
@@ -156,35 +160,69 @@ ipcMain.handle("select-output-directory", async () => {
 });
 
 ipcMain.handle("convert-file", async (_event, payload) => {
-  const inputPath = payload?.inputPath;
-  const outputDir = payload?.outputDir;
+  try {
+    const inputPath = payload?.inputPath;
+    const outputDir = payload?.outputDir;
 
-  if (!inputPath || !fs.existsSync(inputPath)) {
-    return { ok: false, errorCode: "INPUT_MISSING", message: "源文件不存在，请重新选择文件。" };
+    if (!inputPath || !fs.existsSync(inputPath)) {
+      return { ok: false, errorCode: "INPUT_MISSING", message: "源文件不存在，请重新选择文件。" };
+    }
+
+    const fileInfo = getFileInfo(inputPath);
+    if (!fileInfo.supported) {
+      return { ok: false, errorCode: "UNSUPPORTED_FILE_TYPE", message: `暂不支持 .${fileInfo.ext || "unknown"} 文件。` };
+    }
+
+    const directoryCheck = ensureWritableDirectory(outputDir);
+    if (!directoryCheck.ok) {
+      return directoryCheck;
+    }
+
+    const outputPath = getAvailableOutputPath(inputPath, outputDir);
+    return await runConverter(inputPath, outputPath);
+  } catch (error) {
+    return {
+      ok: false,
+      errorCode: "CONVERSION_FAILED",
+      message: getErrorMessage(error, "转换失败，请检查文件、输出目录或 MarkItDown 环境。"),
+    };
   }
-
-  const fileInfo = getFileInfo(inputPath);
-  if (!fileInfo.supported) {
-    return { ok: false, errorCode: "UNSUPPORTED_FILE_TYPE", message: `暂不支持 .${fileInfo.ext || "unknown"} 文件。` };
-  }
-
-  const directoryCheck = ensureWritableDirectory(outputDir);
-  if (!directoryCheck.ok) {
-    return directoryCheck;
-  }
-
-  const outputPath = getAvailableOutputPath(inputPath, outputDir);
-  return runConverter(inputPath, outputPath);
 });
 
 ipcMain.handle("open-output-location", async (_event, payload) => {
-  const outputPath = payload?.outputPath;
-  if (!outputPath) {
-    return { ok: false, message: "没有可打开的输出文件。" };
-  }
+  try {
+    const outputPath = payload?.outputPath;
+    if (!outputPath) {
+      return { ok: false, errorCode: "OUTPUT_PATH_MISSING", message: "没有可打开的输出文件。" };
+    }
 
-  const result = await shell.showItemInFolder(outputPath);
-  return { ok: result !== false };
+    if (!fs.existsSync(outputPath)) {
+      return {
+        ok: false,
+        errorCode: "OUTPUT_PATH_MISSING",
+        message: "输出位置不存在，请检查文件是否已被移动或删除。",
+      };
+    }
+
+    const stats = fs.statSync(outputPath);
+    const targetPath = stats.isDirectory() ? outputPath : path.dirname(outputPath);
+    const errorMessage = await shell.openPath(targetPath);
+    if (errorMessage) {
+      return {
+        ok: false,
+        errorCode: "OPEN_OUTPUT_LOCATION_FAILED",
+        message: errorMessage,
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      errorCode: "OPEN_OUTPUT_LOCATION_FAILED",
+      message: getErrorMessage(error, "无法打开输出位置，请手动打开保存目录。"),
+    };
+  }
 });
 
 app.whenReady().then(createWindow);
