@@ -154,6 +154,7 @@ test("queue conversion marks rejected invokes as errors and continues", async ()
 
 test("builds Windows releases as an installer for faster app startup", () => {
   const winBuild = packageJson.build.win;
+  const nsisBuild = packageJson.build.nsis;
 
   assert.equal(packageJson.build.electronDist, "node_modules/electron/dist");
   assert.equal(packageJson.scripts["dist:win"].includes(" portable"), false);
@@ -164,4 +165,6 @@ test("builds Windows releases as an installer for faster app startup", () => {
       arch: ["x64"],
     },
   ]);
+  assert.equal(nsisBuild.oneClick, false);
+  assert.equal(nsisBuild.allowToChangeInstallationDirectory, true);
 });
