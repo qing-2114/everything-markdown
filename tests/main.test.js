@@ -190,3 +190,10 @@ test("resolves only the official uninstaller beside the installed app", () => {
   assert.equal(isPathInsideDirectory("C:\\Users\\demo\\Desktop\\notes.txt", path.dirname(appExePath)), false);
   assert.deepEqual(getWindowsUninstallerArgs(), ["/currentuser", "/S"]);
 });
+
+test("shows the uninstall action near the top of the settings panel", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "index.html"), "utf8");
+
+  assert.ok(html.indexOf('id="uninstallButton"') > -1);
+  assert.ok(html.indexOf('id="uninstallButton"') < html.indexOf('class="action-row"'));
+});
