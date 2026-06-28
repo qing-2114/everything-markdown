@@ -23,6 +23,12 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  colorSwitcher: document.querySelector("#colorSwitcher"),
+  colorLabel: document.querySelector("#colorLabel"),
+  colorButton: document.querySelector("#colorButton"),
+  colorButtonText: document.querySelector("#colorButtonText"),
+  colorMenu: document.querySelector("#colorMenu"),
+  colorOptions: Array.from(document.querySelectorAll("[data-color-option]")),
   languageSwitcher: document.querySelector("#languageSwitcher"),
   languageLabel: document.querySelector("#languageLabel"),
   languageButton: document.querySelector("#languageButton"),
@@ -58,6 +64,10 @@ const elements = {
 const translations = {
   zh: {
     waitingStatus: "等待文件",
+    colorLabel: "颜色",
+    colorSystem: "跟随系统",
+    colorLight: "浅色",
+    colorDark: "深色",
     languageLabel: "语言",
     workspaceLabel: "Markdown 转换工作台",
     settingsLabel: "转换设置",
@@ -110,6 +120,10 @@ const translations = {
   },
   en: {
     waitingStatus: "Waiting for files",
+    colorLabel: "Color",
+    colorSystem: "System",
+    colorLight: "Light",
+    colorDark: "Dark",
     languageLabel: "Language",
     workspaceLabel: "Markdown conversion workspace",
     settingsLabel: "Conversion settings",
@@ -172,6 +186,12 @@ const STATUS_LABEL_KEYS = {
 const LANGUAGE_LABELS = {
   zh: "中文",
   en: "English",
+};
+
+const COLOR_LABEL_KEYS = {
+  system: "colorSystem",
+  light: "colorLight",
+  dark: "colorDark",
 };
 
 function t(key, values = {}) {
@@ -341,6 +361,13 @@ function renderQueue() {
 
 function updateStaticText() {
   document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
+  elements.colorLabel.textContent = t("colorLabel");
+  elements.colorButtonText.textContent = t(COLOR_LABEL_KEYS[state.color] || "colorLight");
+  for (const option of elements.colorOptions) {
+    const selected = option.dataset.colorOption === state.color;
+    option.textContent = t(COLOR_LABEL_KEYS[option.dataset.colorOption] || "colorLight");
+    option.setAttribute("aria-selected", String(selected));
+  }
   elements.languageLabel.textContent = t("languageLabel");
   elements.languageButtonText.textContent = LANGUAGE_LABELS[state.language] || state.language;
   for (const option of elements.languageOptions) {
@@ -443,23 +470,53 @@ function renderOutputDirText() {
   elements.outputDirText.textContent = state.outputDir || t("noOutputDir");
 }
 
-function setLanguageMenuOpen(isOpen) {
-  elements.languageButton.setAttribute("aria-expanded", String(isOpen));
+function setPreferenceMenuOpen(switcher, button, menu, isOpen) {
+  button.setAttribute("aria-expanded", String(isOpen));
 
   if (isOpen) {
-    elements.languageMenu.hidden = false;
+    menu.hidden = false;
     window.requestAnimationFrame(() => {
-      elements.languageSwitcher.dataset.open = "true";
+      switcher.dataset.open = "true";
     });
     return;
   }
 
-  elements.languageSwitcher.dataset.open = "false";
+  switcher.dataset.open = "false";
   window.setTimeout(() => {
-    if (elements.languageSwitcher.dataset.open !== "true") {
-      elements.languageMenu.hidden = true;
+    if (switcher.dataset.open !== "true") {
+      menu.hidden = true;
     }
   }, 180);
+}
+
+function setColorMenuOpen(isOpen) {
+  setPreferenceMenuOpen(elements.colorSwitcher, elements.colorButton, elements.colorMenu, isOpen);
+}
+
+function setLanguageMenuOpen(isOpen) {
+  setPreferenceMenuOpen(elements.languageSwitcher, elements.languageButton, elements.languageMenu, isOpen);
+}
+
+async function chooseColor(color) {
+  if (!["system", "light", "dark"].includes(color) || color === state.color) {
+    setColorMenuOpen(false);
+    return;
+  }
+
+  const previousPreferences = { language: state.language, color: state.color };
+  applyPreferences({ language: state.language, color: color });
+  setColorMenuOpen(false);
+
+  if (!window.markdownApp?.setPreferences) {
+    return;
+  }
+
+  try {
+    const preferences = await window.markdownApp.setPreferences({ color: color });
+    applyPreferences(preferences);
+  } catch {
+    applyPreferences(previousPreferences);
+  }
 }
 
 async function chooseLanguage(language) {
@@ -573,7 +630,19 @@ async function init() {
 
 elements.selectFileButton.addEventListener("click", chooseInputFiles);
 
+elements.colorButton.addEventListener("click", () => {
+  setLanguageMenuOpen(false);
+  setColorMenuOpen(elements.colorSwitcher.dataset.open !== "true");
+});
+
+for (const option of elements.colorOptions) {
+  option.addEventListener("click", () => {
+    chooseColor(option.dataset.colorOption);
+  });
+}
+
 elements.languageButton.addEventListener("click", () => {
+  setColorMenuOpen(false);
   setLanguageMenuOpen(elements.languageSwitcher.dataset.open !== "true");
 });
 
@@ -584,6 +653,9 @@ for (const option of elements.languageOptions) {
 }
 
 document.addEventListener("click", (event) => {
+  if (!elements.colorSwitcher.contains(event.target)) {
+    setColorMenuOpen(false);
+  }
   if (!elements.languageSwitcher.contains(event.target)) {
     setLanguageMenuOpen(false);
   }
@@ -591,8 +663,13 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    setColorMenuOpen(false);
     setLanguageMenuOpen(false);
-    elements.languageButton.focus();
+    if (elements.colorSwitcher.contains(document.activeElement)) {
+      elements.colorButton.focus();
+    } else {
+      elements.languageButton.focus();
+    }
   }
 });
 

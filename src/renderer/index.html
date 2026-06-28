@@ -16,15 +16,29 @@
           </div>
         </div>
         <div class="topbar-actions">
-          <div class="language-switcher" id="languageSwitcher">
-            <span id="languageLabel">语言</span>
-            <button class="language-button" id="languageButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span id="languageButtonText">中文</span>
-              <span class="language-arrow" aria-hidden="true"></span>
-            </button>
-            <div class="language-menu" id="languageMenu" role="listbox" aria-labelledby="languageLabel" hidden>
-              <button class="language-option" type="button" role="option" data-language-option="zh" aria-selected="true">中文</button>
-              <button class="language-option" type="button" role="option" data-language-option="en" aria-selected="false">English</button>
+          <div class="preference-stack">
+            <div class="preference-switcher" id="colorSwitcher">
+              <span id="colorLabel">颜色</span>
+              <button class="preference-button" id="colorButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span id="colorButtonText">浅色</span>
+                <span class="preference-arrow" aria-hidden="true"></span>
+              </button>
+              <div class="preference-menu" id="colorMenu" role="listbox" aria-labelledby="colorLabel" hidden>
+                <button class="preference-option" type="button" role="option" data-color-option="system" aria-selected="false">跟随系统</button>
+                <button class="preference-option" type="button" role="option" data-color-option="light" aria-selected="true">浅色</button>
+                <button class="preference-option" type="button" role="option" data-color-option="dark" aria-selected="false">深色</button>
+              </div>
+            </div>
+            <div class="preference-switcher language-switcher" id="languageSwitcher">
+              <span id="languageLabel">语言</span>
+              <button class="preference-button" id="languageButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span id="languageButtonText">中文</span>
+                <span class="preference-arrow" aria-hidden="true"></span>
+              </button>
+              <div class="preference-menu" id="languageMenu" role="listbox" aria-labelledby="languageLabel" hidden>
+                <button class="preference-option" type="button" role="option" data-language-option="zh" aria-selected="true">中文</button>
+                <button class="preference-option" type="button" role="option" data-language-option="en" aria-selected="false">English</button>
+              </div>
             </div>
           </div>
           <div class="status-pill" id="statusPill" aria-live="polite">等待文件</div>

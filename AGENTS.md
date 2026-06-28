@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## GitHub 发布规则
+
+- 提交 GitHub 时，只提交当前仓库应纳入版本控制的源码、配置、测试和文档文件；`release/`、`build/`、`dist/`、`node_modules/` 等生成物目录不提交到 Git。
+- Windows 安装包不通过普通 Git 提交更新；生成新版安装包后，需要更新 GitHub Releases 中对应版本的安装包资产。
+- 更新 GitHub Releases 时，上传当前版本的 `release/Everything Markdown Setup <version>.exe` 和对应 `.exe.blockmap`；本地 `release/` 只保留当前版本安装包和 blockmap。
+
 适用范围：本文件位于项目根目录，规则适用于整个 `everything-markdown` 项目。
 
 ## 基本要求

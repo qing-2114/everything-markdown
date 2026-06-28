@@ -316,7 +316,7 @@ test("builds Windows releases as an installer for faster app startup", () => {
 });
 
 test("package version is bumped for the next installer name", () => {
-  assert.equal(packageJson.version, "0.1.4");
+  assert.equal(packageJson.version, "0.1.5");
   assert.equal(packageJson.build.win.artifactName, "Everything Markdown Setup ${version}.${ext}");
 });
 
@@ -344,14 +344,13 @@ test("shows the uninstall action near the top of the settings panel", () => {
   assert.equal(html.includes('id="uninstallButton"'), false);
 });
 
-test("adds color preference and uninstall actions to the Edit menu", () => {
+test("keeps uninstall in the Edit menu without color controls", () => {
   const mainSource = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
 
   assert.match(mainSource, /label:\s*"Edit"/);
   assert.doesNotMatch(mainSource, /label:\s*"Language"/);
-  assert.match(mainSource, /label:\s*"Color"/);
+  assert.doesNotMatch(mainSource, /label:\s*"Color"/);
   assert.match(mainSource, /label:\s*"Uninstall Everything Markdown"/);
-  assert.ok(mainSource.indexOf('label: "Uninstall Everything Markdown"') > mainSource.indexOf('label: "Color"'));
 });
 
 test("shows language switching in the top bar instead of the Edit menu", () => {
@@ -370,12 +369,33 @@ test("shows language switching in the top bar instead of the Edit menu", () => {
   assert.match(rendererSource, /setLanguageMenuOpen/);
   assert.match(rendererSource, /requestAnimationFrame/);
   assert.match(rendererSource, /setPreferences\(\{\s*language:/);
-  assert.match(stylesSource, /\.language-menu/);
+  assert.match(stylesSource, /\.preference-menu/);
   assert.match(stylesSource, /border-radius:\s*var\(--radius-shell\)/);
   assert.match(stylesSource, /opacity/);
   assert.match(stylesSource, /translateY/);
   assert.match(stylesSource, /scale\(0\.96\)/);
   assert.match(stylesSource, /rotate\(-45deg\)/);
+});
+
+test("shows color switching above language in the top bar", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "index.html"), "utf8");
+  const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "renderer.js"), "utf8");
+  const stylesSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "styles.css"), "utf8");
+
+  assert.match(html, /class="preference-stack"/);
+  assert.match(html, /id="colorSwitcher"/);
+  assert.match(html, /id="colorButton"/);
+  assert.match(html, /id="colorMenu"/);
+  assert.match(html, /data-color-option="system"/);
+  assert.match(html, /data-color-option="light"/);
+  assert.match(html, /data-color-option="dark"/);
+  assert.ok(html.indexOf('id="colorSwitcher"') < html.indexOf('id="languageSwitcher"'));
+  assert.match(rendererSource, /colorButton/);
+  assert.match(rendererSource, /chooseColor/);
+  assert.match(rendererSource, /setPreferences\(\{\s*color:/);
+  assert.match(stylesSource, /\.preference-stack/);
+  assert.match(stylesSource, /\.preference-switcher/);
+  assert.match(stylesSource, /\.preference-menu/);
 });
 
 test("renderer applies language changes immediately and preserves partial preferences", () => {
@@ -392,13 +412,14 @@ test("renderer applies language changes immediately and preserves partial prefer
 
 test("renderer keeps local language changes when opened without the Electron bridge", () => {
   const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "renderer.js"), "utf8");
-  const localApplyIndex = rendererSource.indexOf("applyPreferences({ language: language, color: state.color })");
-  const optionalSaveIndex = rendererSource.indexOf("window.markdownApp?.setPreferences");
+  const chooseLanguageSource = rendererSource.slice(rendererSource.indexOf("async function chooseLanguage"), rendererSource.indexOf("function getDraggedFilePaths"));
+  const localApplyIndex = chooseLanguageSource.indexOf("applyPreferences({ language: language, color: state.color })");
+  const optionalSaveIndex = chooseLanguageSource.indexOf("window.markdownApp?.setPreferences");
 
   assert.ok(localApplyIndex > -1);
   assert.ok(optionalSaveIndex > -1);
   assert.ok(localApplyIndex < optionalSaveIndex);
-  assert.match(rendererSource, /if \(!window\.markdownApp\?\.setPreferences\)/);
+  assert.match(chooseLanguageSource, /if \(!window\.markdownApp\?\.setPreferences\)/);
 });
 
 test("renderer guards Electron-only startup hooks for direct HTML testing", () => {

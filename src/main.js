@@ -177,7 +177,6 @@ function setPreference(name, value) {
 }
 
 function buildApplicationMenu() {
-  const preferences = getPreferences();
   const menu = Menu.buildFromTemplate([
     {
       label: "File",
@@ -195,30 +194,6 @@ function buildApplicationMenu() {
         { role: "delete" },
         { type: "separator" },
         { role: "selectAll" },
-        { type: "separator" },
-        {
-          label: "Color",
-          submenu: [
-            {
-              label: "System",
-              type: "radio",
-              checked: preferences.color === "system",
-              click: () => setPreference("color", "system"),
-            },
-            {
-              label: "Light",
-              type: "radio",
-              checked: preferences.color === "light",
-              click: () => setPreference("color", "light"),
-            },
-            {
-              label: "Dark",
-              type: "radio",
-              checked: preferences.color === "dark",
-              click: () => setPreference("color", "dark"),
-            },
-          ],
-        },
         { type: "separator" },
         {
           label: "Uninstall Everything Markdown",

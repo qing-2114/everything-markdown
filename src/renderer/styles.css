@@ -122,10 +122,16 @@ button:focus-visible,
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
-  gap: 10px;
+  gap: 12px;
 }
 
-.language-switcher {
+.preference-stack {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.preference-switcher {
   display: inline-flex;
   position: relative;
   align-items: center;
@@ -137,7 +143,7 @@ button:focus-visible,
   white-space: nowrap;
 }
 
-.language-button {
+.preference-button {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -153,7 +159,7 @@ button:focus-visible,
   font-weight: 800;
 }
 
-.language-arrow {
+.preference-arrow {
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
@@ -163,11 +169,11 @@ button:focus-visible,
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.language-switcher[data-open="true"] .language-arrow {
+.preference-switcher[data-open="true"] .preference-arrow {
   transform: rotate(-45deg);
 }
 
-.language-menu {
+.preference-menu {
   position: absolute;
   top: calc(100% + 7px);
   right: 0;
@@ -189,13 +195,13 @@ button:focus-visible,
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.language-switcher[data-open="true"] .language-menu {
+.preference-switcher[data-open="true"] .preference-menu {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
-.language-option {
+.preference-option {
   min-height: 32px;
   padding: 0 12px;
   border-radius: var(--radius);
@@ -206,9 +212,9 @@ button:focus-visible,
   font-weight: 700;
 }
 
-.language-option:hover,
-.language-option:focus-visible,
-.language-option[aria-selected="true"] {
+.preference-option:hover,
+.preference-option:focus-visible,
+.preference-option[aria-selected="true"] {
   color: var(--accent-strong);
   background: var(--accent-soft);
 }
@@ -793,8 +799,8 @@ html[data-theme="dark"] .queue-item {
 html[data-theme="dark"] .secondary-button,
 html[data-theme="dark"] .icon-button,
 html[data-theme="dark"] .danger-button,
-html[data-theme="dark"] .language-button,
-html[data-theme="dark"] .language-menu {
+html[data-theme="dark"] .preference-button,
+html[data-theme="dark"] .preference-menu {
   background: var(--surface);
 }
 
