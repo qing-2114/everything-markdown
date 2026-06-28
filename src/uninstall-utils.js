@@ -7,7 +7,7 @@ function getWindowsUninstallerPath(appExePath) {
 }
 
 function getWindowsUninstallerArgs() {
-  return ["/currentuser", "/S"];
+  return ["/currentuser"];
 }
 
 function normalizeForCompare(targetPath) {

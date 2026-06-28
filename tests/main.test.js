@@ -188,12 +188,43 @@ test("resolves only the official uninstaller beside the installed app", () => {
   );
   assert.equal(isPathInsideDirectory(uninstallerPath, path.dirname(appExePath)), true);
   assert.equal(isPathInsideDirectory("C:\\Users\\demo\\Desktop\\notes.txt", path.dirname(appExePath)), false);
-  assert.deepEqual(getWindowsUninstallerArgs(), ["/currentuser", "/S"]);
+  assert.deepEqual(getWindowsUninstallerArgs(), ["/currentuser"]);
+  assert.equal(getWindowsUninstallerArgs().includes("/S"), false);
 });
 
 test("shows the uninstall action near the top of the settings panel", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "index.html"), "utf8");
 
-  assert.ok(html.indexOf('id="uninstallButton"') > -1);
-  assert.ok(html.indexOf('id="uninstallButton"') < html.indexOf('class="action-row"'));
+  assert.equal(html.includes('id="uninstallButton"'), false);
+});
+
+test("adds preferences and uninstall actions to the Edit menu", () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
+
+  assert.match(mainSource, /label:\s*"Edit"/);
+  assert.match(mainSource, /label:\s*"Language"/);
+  assert.match(mainSource, /label:\s*"Color"/);
+  assert.match(mainSource, /label:\s*"Uninstall Everything Markdown"/);
+  assert.ok(mainSource.indexOf('label: "Uninstall Everything Markdown"') > mainSource.indexOf('label: "Color"'));
+});
+
+test("resets the installer default directory instead of reusing the previous install path", () => {
+  const nsisInclude = packageJson.build.nsis.include;
+  const scriptPath = path.join(__dirname, "..", nsisInclude);
+  const script = fs.readFileSync(scriptPath, "utf8");
+
+  assert.equal(nsisInclude, "installer/nsis/installer.nsh");
+  assert.match(script, /!macro\s+customInit/);
+  assert.match(script, /\$LOCALAPPDATA\\Programs\\everything-markdown/);
+});
+
+test("renderer supports Chinese and English UI text with color themes", () => {
+  const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "renderer.js"), "utf8");
+  const stylesSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "styles.css"), "utf8");
+
+  assert.match(rendererSource, /const translations/);
+  assert.match(rendererSource, /zh:/);
+  assert.match(rendererSource, /en:/);
+  assert.match(rendererSource, /applyPreferences/);
+  assert.match(stylesSource, /html\[data-theme="dark"\]/);
 });

@@ -9,4 +9,10 @@ contextBridge.exposeInMainWorld("markdownApp", {
   convertFile: (payload) => ipcRenderer.invoke("convert-file", payload),
   openOutputLocation: (payload) => ipcRenderer.invoke("open-output-location", payload),
   requestUninstall: () => ipcRenderer.invoke("request-uninstall"),
+  setPreferences: (preferences) => ipcRenderer.invoke("set-preferences", preferences),
+  onPreferencesChanged: (callback) => {
+    const listener = (_event, preferences) => callback(preferences);
+    ipcRenderer.on("preferences-changed", listener);
+    return () => ipcRenderer.removeListener("preferences-changed", listener);
+  },
 });
