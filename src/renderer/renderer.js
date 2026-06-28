@@ -4,7 +4,9 @@ const {
   canStartQueue,
   getNextQueuedItem,
   getQueueSummary,
+  removeCompletedQueueItems,
   removeQueueItem,
+  resetFailedQueueItems,
   runQueueConversion,
 } = window.queueUtils;
 
@@ -30,6 +32,8 @@ const elements = {
   sourceQueueLabel: document.querySelector(".section-label"),
   queueHeaderLabel: document.querySelector(".queue-list-header span"),
   queueList: document.querySelector("#queueList"),
+  retryFailedButton: document.querySelector("#retryFailedButton"),
+  clearCompletedButton: document.querySelector("#clearCompletedButton"),
   clearQueueButton: document.querySelector("#clearQueueButton"),
   outputSettingLabel: document.querySelector(".setting-copy span"),
   outputDirText: document.querySelector("#outputDirText"),
@@ -55,6 +59,8 @@ const translations = {
     fileMetaEmpty: "支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。",
     selectFile: "选择文件",
     queueTitle: "文件队列",
+    retryFailed: "重试失败",
+    clearCompleted: "清除成功",
     clearQueue: "清空队列",
     emptyQueue: "还没有文件。你可以点击选择文件，或把文件拖到上方区域。",
     outputLocation: "输出位置",
@@ -104,6 +110,8 @@ const translations = {
     fileMetaEmpty: "Supports PDF, Word, PowerPoint, Excel, HTML, CSV, JSON, XML, and TXT.",
     selectFile: "Choose files",
     queueTitle: "File queue",
+    retryFailed: "Retry failed",
+    clearCompleted: "Clear successful",
     clearQueue: "Clear queue",
     emptyQueue: "No files yet. Choose files or drop them into the area above.",
     outputLocation: "Output location",
@@ -227,6 +235,8 @@ function setConverting(isConverting) {
   elements.convertButton.dataset.loading = String(isConverting);
   elements.selectFileButton.disabled = isConverting;
   elements.selectOutputButton.disabled = isConverting;
+  elements.retryFailedButton.disabled = isConverting || !state.queue.some((item) => item.supported && item.status === QUEUE_STATUS.ERROR);
+  elements.clearCompletedButton.disabled = isConverting || !state.queue.some((item) => item.status === QUEUE_STATUS.SUCCESS);
   elements.clearQueueButton.disabled = isConverting || state.queue.length === 0;
 }
 
@@ -323,6 +333,8 @@ function updateStaticText() {
   elements.sourceQueueLabel.textContent = t("sourceQueue");
   elements.selectFileButton.textContent = t("selectFile");
   elements.queueHeaderLabel.textContent = t("queueTitle");
+  elements.retryFailedButton.textContent = t("retryFailed");
+  elements.clearCompletedButton.textContent = t("clearCompleted");
   elements.clearQueueButton.textContent = t("clearQueue");
   elements.outputSettingLabel.textContent = t("outputLocation");
   elements.selectOutputButton.textContent = t("selectFolder");
@@ -335,6 +347,8 @@ function updateConvertAvailability() {
   const hasOutput = Boolean(state.outputDir);
   const canStart = canStartQueue(state.queue);
   elements.convertButton.disabled = !canStart || !hasOutput || state.isConverting;
+  elements.retryFailedButton.disabled = state.isConverting || !state.queue.some((item) => item.supported && item.status === QUEUE_STATUS.ERROR);
+  elements.clearCompletedButton.disabled = state.isConverting || !state.queue.some((item) => item.status === QUEUE_STATUS.SUCCESS);
   elements.clearQueueButton.disabled = state.isConverting || state.queue.length === 0;
   elements.convertButtonText.textContent = state.isConverting ? t("convertingButton") : t("convert");
   elements.progressSummary.textContent = formatProgress(summary);
@@ -446,7 +460,7 @@ async function convertQueue() {
     const result = await runQueueConversion({
       queue: state.queue,
       outputDir: state.outputDir,
-      convertFile: (payload) => window.markdownApp.convertFile(payload),
+      convertFiles: (payload) => window.markdownApp.convertFiles(payload),
       onQueueChange: (nextQueue) => {
         state.queue = nextQueue;
         renderAll();
@@ -537,6 +551,26 @@ elements.clearQueueButton.addEventListener("click", () => {
   }
 
   state.queue = [];
+  clearResult();
+  renderAll();
+});
+
+elements.retryFailedButton.addEventListener("click", () => {
+  if (state.isConverting) {
+    return;
+  }
+
+  state.queue = resetFailedQueueItems(state.queue);
+  clearResult();
+  renderAll();
+});
+
+elements.clearCompletedButton.addEventListener("click", () => {
+  if (state.isConverting) {
+    return;
+  }
+
+  state.queue = removeCompletedQueueItems(state.queue);
   clearResult();
   renderAll();
 });

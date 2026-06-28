@@ -34,7 +34,11 @@
             <div class="queue-list-shell">
               <div class="queue-list-header">
                 <span>文件队列</span>
-                <button class="text-button" id="clearQueueButton" type="button" disabled>清空队列</button>
+                <div class="queue-actions">
+                  <button class="text-button" id="retryFailedButton" type="button" disabled>重试失败</button>
+                  <button class="text-button" id="clearCompletedButton" type="button" disabled>清除成功</button>
+                  <button class="text-button" id="clearQueueButton" type="button" disabled>清空队列</button>
+                </div>
               </div>
               <div class="queue-list" id="queueList" aria-live="polite">
                 <p class="empty-queue">还没有文件。你可以点击选择文件，或把文件拖到上方区域。</p>

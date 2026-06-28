@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { execFile } = require("node:child_process");
 const packageJson = require("../package.json");
 const {
   getWindowsUninstallerArgs,
@@ -14,6 +15,7 @@ const {
   SUPPORTED_EXTENSIONS,
   getFileInfo,
   ensureWritableDirectory,
+  getAvailableOutputPaths,
   getAvailableOutputPath,
 } = require("../src/conversion-utils");
 const {
@@ -22,10 +24,27 @@ const {
   canStartQueue,
   getNextQueuedItem,
   getQueueSummary,
+  removeCompletedQueueItems,
   removeQueueItem,
+  resetFailedQueueItems,
   runQueueConversion,
   updateQueueItem,
 } = require("../src/queue-utils");
+
+function execFileAsync(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, options, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+
+      resolve({ stdout, stderr });
+    });
+  });
+}
 
 test("recognizes supported and unsupported file types", () => {
   assert.equal(SUPPORTED_EXTENSIONS.has(".pdf"), true);
@@ -43,6 +62,23 @@ test("generates numbered markdown paths without overwriting existing files", () 
   fs.writeFileSync(path.join(dir, "report (1).md"), "existing", "utf8");
 
   assert.equal(getAvailableOutputPath(inputPath, dir), path.join(dir, "report (2).md"));
+});
+
+test("generates batch markdown paths without collisions inside the same batch", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "everything-markdown-"));
+  fs.writeFileSync(path.join(dir, "report.md"), "existing", "utf8");
+
+  const inputPaths = [
+    path.join("C:\\demo", "report.pdf"),
+    path.join("D:\\incoming", "report.docx"),
+    path.join("D:\\incoming", "notes.txt"),
+  ];
+
+  assert.deepEqual(getAvailableOutputPaths(inputPaths, dir), [
+    path.join(dir, "report (1).md"),
+    path.join(dir, "report (2).md"),
+    path.join(dir, "notes.md"),
+  ]);
 });
 
 test("validates output directory presence and writability", () => {
@@ -113,6 +149,40 @@ test("removes only queued queue items", () => {
   assert.equal(removeQueueItem(withStatuses, 4).length, 4);
 });
 
+test("resets failed supported files and removes completed files from the queue", () => {
+  const { queue } = addFilesToQueue(
+    [],
+    [
+      getFileInfo("C:\\demo\\first.pdf"),
+      getFileInfo("C:\\demo\\second.docx"),
+      getFileInfo("C:\\demo\\third.pptx"),
+      getFileInfo("C:\\demo\\app.exe"),
+    ],
+    1,
+  );
+  const withStatuses = updateQueueItem(
+    updateQueueItem(updateQueueItem(queue, 1, { status: QUEUE_STATUS.SUCCESS }), 2, {
+      status: QUEUE_STATUS.ERROR,
+      errorMessage: "Locked",
+    }),
+    3,
+    { status: QUEUE_STATUS.CONVERTING },
+  );
+
+  const retried = resetFailedQueueItems(withStatuses);
+  assert.equal(retried[0].status, QUEUE_STATUS.SUCCESS);
+  assert.equal(retried[1].status, QUEUE_STATUS.QUEUED);
+  assert.equal(retried[1].errorMessage, "");
+  assert.equal(retried[2].status, QUEUE_STATUS.CONVERTING);
+  assert.equal(retried[3].status, QUEUE_STATUS.ERROR);
+
+  const remaining = removeCompletedQueueItems(retried);
+  assert.deepEqual(
+    remaining.map((item) => item.id),
+    [2, 3, 4],
+  );
+});
+
 test("queue conversion marks rejected invokes as errors and continues", async () => {
   const { queue } = addFilesToQueue(
     [],
@@ -157,6 +227,77 @@ test("queue conversion marks rejected invokes as errors and continues", async ()
   assert.deepEqual(snapshots.at(-1), [QUEUE_STATUS.ERROR, QUEUE_STATUS.SUCCESS]);
 });
 
+test("queue conversion can invoke a batch converter once and keep per-file results", async () => {
+  const { queue } = addFilesToQueue(
+    [],
+    [getFileInfo("C:\\demo\\first.pdf"), getFileInfo("C:\\demo\\second.docx")],
+    1,
+  );
+  const snapshots = [];
+  let batchCalls = 0;
+
+  const result = await runQueueConversion({
+    queue,
+    outputDir: "C:\\out",
+    convertFiles: async ({ items, outputDir }) => {
+      batchCalls += 1;
+      assert.equal(outputDir, "C:\\out");
+      assert.deepEqual(
+        items.map((item) => item.inputPath),
+        ["C:\\demo\\first.pdf", "C:\\demo\\second.docx"],
+      );
+      return {
+        ok: true,
+        results: [
+          { inputPath: "C:\\demo\\first.pdf", ok: true, outputPath: "C:\\out\\first.md" },
+          { inputPath: "C:\\demo\\second.docx", ok: false, message: "Cannot read file" },
+        ],
+      };
+    },
+    onQueueChange: (nextQueue) => {
+      snapshots.push(nextQueue.map((item) => item.status));
+    },
+  });
+
+  assert.equal(batchCalls, 1);
+  assert.equal(result.queue[0].status, QUEUE_STATUS.SUCCESS);
+  assert.equal(result.queue[0].outputPath, "C:\\out\\first.md");
+  assert.equal(result.queue[1].status, QUEUE_STATUS.ERROR);
+  assert.equal(result.queue[1].errorMessage, "Cannot read file");
+  assert.equal(result.lastOutputPath, "C:\\out\\first.md");
+  assert.deepEqual(snapshots[0], [QUEUE_STATUS.CONVERTING, QUEUE_STATUS.CONVERTING]);
+  assert.deepEqual(snapshots.at(-1), [QUEUE_STATUS.SUCCESS, QUEUE_STATUS.ERROR]);
+});
+
+test("converter script supports batch jobs and returns per-file output", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "everything-markdown-"));
+  const firstInput = path.join(dir, "first.txt");
+  const secondInput = path.join(dir, "second.html");
+  const firstOutput = path.join(dir, "first.md");
+  const secondOutput = path.join(dir, "second.md");
+
+  fs.writeFileSync(firstInput, "Plain text sample", "utf8");
+  fs.writeFileSync(secondInput, "<h1>Heading</h1><p>Body</p>", "utf8");
+
+  const { stdout } = await execFileAsync("python", [
+    path.join(__dirname, "..", "scripts", "convert.py"),
+    "--jobs-json",
+    JSON.stringify([
+      { input: firstInput, output: firstOutput },
+      { input: secondInput, output: secondOutput },
+    ]),
+  ]);
+
+  const parsed = JSON.parse(stdout.trim());
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(
+    parsed.results.map((item) => item.ok),
+    [true, true],
+  );
+  assert.equal(fs.readFileSync(firstOutput, "utf8").includes("Plain text sample"), true);
+  assert.equal(fs.readFileSync(secondOutput, "utf8").includes("Heading"), true);
+});
+
 test("builds Windows releases as an installer for faster app startup", () => {
   const winBuild = packageJson.build.win;
   const nsisBuild = packageJson.build.nsis;
@@ -172,6 +313,11 @@ test("builds Windows releases as an installer for faster app startup", () => {
   ]);
   assert.equal(nsisBuild.oneClick, false);
   assert.equal(nsisBuild.allowToChangeInstallationDirectory, true);
+});
+
+test("package version is bumped for the next installer name", () => {
+  assert.equal(packageJson.version, "0.1.1");
+  assert.equal(packageJson.build.win.artifactName, "Everything Markdown Setup ${version}.${ext}");
 });
 
 test("Windows installer uses a cancellable wizard", () => {
@@ -206,6 +352,16 @@ test("adds preferences and uninstall actions to the Edit menu", () => {
   assert.match(mainSource, /label:\s*"Color"/);
   assert.match(mainSource, /label:\s*"Uninstall Everything Markdown"/);
   assert.ok(mainSource.indexOf('label: "Uninstall Everything Markdown"') > mainSource.indexOf('label: "Color"'));
+});
+
+test("main process filters supported input files and blocks unexpected navigation", () => {
+  const mainSource = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
+
+  assert.match(mainSource, /name:\s*"Supported files"/);
+  assert.match(mainSource, /filters:\s*getSupportedFileFilters\(\)/);
+  assert.match(mainSource, /setWindowOpenHandler/);
+  assert.match(mainSource, /will-navigate/);
+  assert.match(mainSource, /event\.preventDefault\(\)/);
 });
 
 test("resets the installer default directory instead of reusing the previous install path", () => {

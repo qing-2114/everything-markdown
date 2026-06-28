@@ -346,6 +346,13 @@ h1 {
   border-bottom: 1px solid var(--border);
 }
 
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .queue-list {
   display: grid;
   max-height: 280px;
@@ -773,6 +780,11 @@ html[data-theme="dark"] .result-panel {
 
   .queue-item {
     gap: 10px;
+  }
+
+  .queue-list-header,
+  .queue-actions {
+    justify-content: flex-start;
   }
 
   .queue-file-icon,
