@@ -24,13 +24,13 @@ PDF, DOCX, PPTX, XLSX, HTML, HTM, CSV, JSON, XML, TXT
 
 ### 1. 下载并运行
 
-在 GitHub Releases 中下载 Windows 便携版：
+在 GitHub Releases 中下载 Windows 安装版：
 
 ```text
-Everything Markdown 0.1.0.exe
+Everything Markdown Setup 0.1.0.exe
 ```
 
-下载后双击运行即可。便携版不需要安装，建议把它放在一个固定目录中，方便以后继续使用。
+下载后双击安装即可。安装版会把程序文件保存到本机，后续启动时不需要每次准备单文件便携包中的资源。
 
 ### 2. 选择需要转换的文件
 
@@ -103,7 +103,7 @@ npm test
 
 当前测试覆盖了文件格式识别、输出路径生成和目录可写性检查等核心转换辅助逻辑。
 
-## 打包 Windows 便携版
+## 打包 Windows 安装版
 
 执行：
 
@@ -111,12 +111,12 @@ npm test
 npm run dist:win
 ```
 
-该命令会先用 PyInstaller 构建内置转换器，再用 electron-builder 生成 Windows 便携版。
+该命令会先用 PyInstaller 构建内置转换器，再用 electron-builder 生成 Windows 安装版。
 
 构建完成后，产物会生成到 `release/` 目录：
 
 ```text
-release/Everything Markdown 0.1.0.exe
+release/Everything Markdown Setup 0.1.0.exe
 ```
 
 ## 常见问题

@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const packageJson = require("../package.json");
 
 const {
   SUPPORTED_EXTENSIONS,
@@ -149,4 +150,18 @@ test("queue conversion marks rejected invokes as errors and continues", async ()
   assert.equal(result.queue[1].status, QUEUE_STATUS.SUCCESS);
   assert.equal(result.lastOutputPath, "C:\\out\\second.md");
   assert.deepEqual(snapshots.at(-1), [QUEUE_STATUS.ERROR, QUEUE_STATUS.SUCCESS]);
+});
+
+test("builds Windows releases as an installer for faster app startup", () => {
+  const winBuild = packageJson.build.win;
+
+  assert.equal(packageJson.build.electronDist, "node_modules/electron/dist");
+  assert.equal(packageJson.scripts["dist:win"].includes(" portable"), false);
+  assert.equal(winBuild.artifactName, "Everything Markdown Setup ${version}.${ext}");
+  assert.deepEqual(winBuild.target, [
+    {
+      target: "nsis",
+      arch: ["x64"],
+    },
+  ]);
 });

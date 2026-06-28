@@ -5,7 +5,7 @@
   "main": "src/main.js",
   "scripts": {
     "build:converter": "pyinstaller --clean --onefile --name convert --collect-data magika scripts/convert.py --distpath build/converter --workpath build/pyinstaller --specpath build/pyinstaller",
-    "dist:win": "npm run build:converter && electron-builder --win portable",
+    "dist:win": "npm run build:converter && electron-builder --win",
     "start": "electron .",
     "test": "node --test tests/*.test.js"
   },
@@ -19,6 +19,7 @@
   "build": {
     "appId": "com.everythingmarkdown.app",
     "productName": "Everything Markdown",
+    "electronDist": "node_modules/electron/dist",
     "directories": {
       "output": "release"
     },
@@ -33,11 +34,11 @@
       }
     ],
     "win": {
-      "artifactName": "Everything Markdown.exe",
+      "artifactName": "Everything Markdown Setup ${version}.${ext}",
       "icon": "src/assets/app-icon.ico",
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
