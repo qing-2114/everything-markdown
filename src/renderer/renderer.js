@@ -23,8 +23,12 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  languageSwitcher: document.querySelector("#languageSwitcher"),
   languageLabel: document.querySelector("#languageLabel"),
-  languageSelect: document.querySelector("#languageSelect"),
+  languageButton: document.querySelector("#languageButton"),
+  languageButtonText: document.querySelector("#languageButtonText"),
+  languageMenu: document.querySelector("#languageMenu"),
+  languageOptions: Array.from(document.querySelectorAll("[data-language-option]")),
   workspace: document.querySelector(".workspace"),
   sidePanel: document.querySelector(".side-panel"),
   fileDropZone: document.querySelector("#fileDropZone"),
@@ -163,6 +167,11 @@ const STATUS_LABEL_KEYS = {
   [QUEUE_STATUS.CONVERTING]: "converting",
   [QUEUE_STATUS.SUCCESS]: "success",
   [QUEUE_STATUS.ERROR]: "error",
+};
+
+const LANGUAGE_LABELS = {
+  zh: "中文",
+  en: "English",
 };
 
 function t(key, values = {}) {
@@ -333,7 +342,11 @@ function renderQueue() {
 function updateStaticText() {
   document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
   elements.languageLabel.textContent = t("languageLabel");
-  elements.languageSelect.value = state.language;
+  elements.languageButtonText.textContent = LANGUAGE_LABELS[state.language] || state.language;
+  for (const option of elements.languageOptions) {
+    const selected = option.dataset.languageOption === state.language;
+    option.setAttribute("aria-selected", String(selected));
+  }
   elements.workspace.setAttribute("aria-label", t("workspaceLabel"));
   elements.sidePanel.setAttribute("aria-label", t("settingsLabel"));
   elements.sourceQueueLabel.textContent = t("sourceQueue");
@@ -430,6 +443,47 @@ function renderOutputDirText() {
   elements.outputDirText.textContent = state.outputDir || t("noOutputDir");
 }
 
+function setLanguageMenuOpen(isOpen) {
+  elements.languageButton.setAttribute("aria-expanded", String(isOpen));
+
+  if (isOpen) {
+    elements.languageMenu.hidden = false;
+    window.requestAnimationFrame(() => {
+      elements.languageSwitcher.dataset.open = "true";
+    });
+    return;
+  }
+
+  elements.languageSwitcher.dataset.open = "false";
+  window.setTimeout(() => {
+    if (elements.languageSwitcher.dataset.open !== "true") {
+      elements.languageMenu.hidden = true;
+    }
+  }, 180);
+}
+
+async function chooseLanguage(language) {
+  if (!["zh", "en"].includes(language) || language === state.language) {
+    setLanguageMenuOpen(false);
+    return;
+  }
+
+  const previousPreferences = { language: state.language, color: state.color };
+  applyPreferences({ language: language, color: state.color });
+  setLanguageMenuOpen(false);
+
+  if (!window.markdownApp?.setPreferences) {
+    return;
+  }
+
+  try {
+    const preferences = await window.markdownApp?.setPreferences({ language: language });
+    applyPreferences(preferences);
+  } catch {
+    applyPreferences(previousPreferences);
+  }
+}
+
 function getDraggedFilePaths(event) {
   return Array.from(event.dataTransfer?.files || [])
     .map((file) => window.markdownApp.getPathForFile(file) || file.path || "")
@@ -506,6 +560,12 @@ async function convertQueue() {
 }
 
 async function init() {
+  if (!window.markdownApp?.getAppState) {
+    applyPreferences({ language: state.language, color: state.color });
+    renderOutputDir("");
+    return;
+  }
+
   const appState = await window.markdownApp.getAppState();
   applyPreferences(appState.preferences);
   renderOutputDir(appState.outputDir);
@@ -513,21 +573,26 @@ async function init() {
 
 elements.selectFileButton.addEventListener("click", chooseInputFiles);
 
-elements.languageSelect.addEventListener("change", async () => {
-  const language = elements.languageSelect.value;
-  if (!["zh", "en"].includes(language) || language === state.language) {
-    elements.languageSelect.value = state.language;
-    return;
+elements.languageButton.addEventListener("click", () => {
+  setLanguageMenuOpen(elements.languageSwitcher.dataset.open !== "true");
+});
+
+for (const option of elements.languageOptions) {
+  option.addEventListener("click", () => {
+    chooseLanguage(option.dataset.languageOption);
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (!elements.languageSwitcher.contains(event.target)) {
+    setLanguageMenuOpen(false);
   }
+});
 
-  const previousPreferences = { language: state.language, color: state.color };
-  applyPreferences({ language: language, color: state.color });
-
-  try {
-    const preferences = await window.markdownApp.setPreferences({ language: language });
-    applyPreferences(preferences);
-  } catch {
-    applyPreferences(previousPreferences);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    setLanguageMenuOpen(false);
+    elements.languageButton.focus();
   }
 });
 
@@ -624,7 +689,7 @@ elements.openLocationButton.addEventListener("click", async () => {
   }
 });
 
-window.markdownApp.onPreferencesChanged((preferences) => {
+window.markdownApp?.onPreferencesChanged?.((preferences) => {
   applyPreferences(preferences);
 });
 
