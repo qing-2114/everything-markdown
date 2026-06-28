@@ -33,6 +33,7 @@
       }
     ],
     "win": {
+      "artifactName": "Everything Markdown.exe",
       "icon": "src/assets/app-icon.ico",
       "target": [
         {
