@@ -48,6 +48,25 @@
     return queue.filter((item) => item.id !== id || item.status !== QUEUE_STATUS.QUEUED);
   }
 
+  function resetFailedQueueItems(queue) {
+    return queue.map((item) => {
+      if (item.supported && item.status === QUEUE_STATUS.ERROR) {
+        return {
+          ...item,
+          status: QUEUE_STATUS.QUEUED,
+          errorMessage: "",
+          outputPath: "",
+        };
+      }
+
+      return item;
+    });
+  }
+
+  function removeCompletedQueueItems(queue) {
+    return queue.filter((item) => item.status !== QUEUE_STATUS.SUCCESS);
+  }
+
   function updateQueueItem(queue, id, updates) {
     return queue.map((item) => (item.id === id ? { ...item, ...updates } : item));
   }
@@ -93,10 +112,60 @@
     return "转换失败，请检查文件、输出目录或 MarkItDown 环境。";
   }
 
-  async function runQueueConversion({ queue, outputDir, convertFile, onQueueChange = () => {} }) {
+  async function runQueueConversion({ queue, outputDir, convertFile, convertFiles, onQueueChange = () => {} }) {
     let nextQueue = queue;
     let lastOutputPath = "";
     let lastOutputDir = "";
+
+    if (typeof convertFiles === "function") {
+      const items = nextQueue.filter((item) => item.supported && item.status === QUEUE_STATUS.QUEUED);
+      if (items.length === 0) {
+        return { queue: nextQueue, lastOutputPath, lastOutputDir };
+      }
+
+      nextQueue = nextQueue.map((item) =>
+        items.some((queuedItem) => queuedItem.id === item.id)
+          ? { ...item, status: QUEUE_STATUS.CONVERTING, errorMessage: "", outputPath: "" }
+          : item,
+      );
+      onQueueChange(nextQueue);
+
+      let result;
+      try {
+        result = await convertFiles({
+          outputDir,
+          items: items.map((item) => ({ id: item.id, inputPath: item.path })),
+        });
+      } catch (error) {
+        result = {
+          ok: false,
+          message: getConversionErrorMessage(error),
+          results: items.map((item) => ({ inputPath: item.path, ok: false, message: getConversionErrorMessage(error) })),
+        };
+      }
+
+      const resultsByPath = new Map((result?.results || []).map((itemResult) => [itemResult.inputPath, itemResult]));
+      for (const item of items) {
+        const itemResult = resultsByPath.get(item.path);
+        if (itemResult?.ok) {
+          nextQueue = updateQueueItem(nextQueue, item.id, {
+            status: QUEUE_STATUS.SUCCESS,
+            outputPath: itemResult.outputPath,
+          });
+          lastOutputPath = itemResult.outputPath || "";
+          lastOutputDir = outputDir;
+        } else {
+          nextQueue = updateQueueItem(nextQueue, item.id, {
+            status: QUEUE_STATUS.ERROR,
+            errorMessage: getConversionErrorMessage(itemResult || result),
+          });
+        }
+      }
+
+      onQueueChange(nextQueue);
+      return { queue: nextQueue, lastOutputPath, lastOutputDir };
+    }
+
     let item = getNextQueuedItem(nextQueue);
 
     while (item) {
@@ -149,7 +218,9 @@
     createQueueItem,
     getNextQueuedItem,
     getQueueSummary,
+    removeCompletedQueueItems,
     removeQueueItem,
+    resetFailedQueueItems,
     runQueueConversion,
     updateQueueItem,
   };

@@ -57,9 +57,28 @@ function getAvailableOutputPath(inputPath, outputDir) {
   return candidate;
 }
 
+function getAvailableOutputPaths(inputPaths, outputDir) {
+  const reserved = new Set();
+
+  return inputPaths.map((inputPath) => {
+    const baseName = path.basename(inputPath, path.extname(inputPath));
+    let candidate = path.join(outputDir, `${baseName}.md`);
+    let index = 1;
+
+    while (fs.existsSync(candidate) || reserved.has(candidate)) {
+      candidate = path.join(outputDir, `${baseName} (${index}).md`);
+      index += 1;
+    }
+
+    reserved.add(candidate);
+    return candidate;
+  });
+}
+
 module.exports = {
   SUPPORTED_EXTENSIONS,
   getFileInfo,
   ensureWritableDirectory,
+  getAvailableOutputPaths,
   getAvailableOutputPath,
 };

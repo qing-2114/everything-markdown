@@ -4,7 +4,9 @@ const {
   canStartQueue,
   getNextQueuedItem,
   getQueueSummary,
+  removeCompletedQueueItems,
   removeQueueItem,
+  resetFailedQueueItems,
   runQueueConversion,
 } = window.queueUtils;
 
@@ -21,6 +23,18 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  colorSwitcher: document.querySelector("#colorSwitcher"),
+  colorLabel: document.querySelector("#colorLabel"),
+  colorButton: document.querySelector("#colorButton"),
+  colorButtonText: document.querySelector("#colorButtonText"),
+  colorMenu: document.querySelector("#colorMenu"),
+  colorOptions: Array.from(document.querySelectorAll("[data-color-option]")),
+  languageSwitcher: document.querySelector("#languageSwitcher"),
+  languageLabel: document.querySelector("#languageLabel"),
+  languageButton: document.querySelector("#languageButton"),
+  languageButtonText: document.querySelector("#languageButtonText"),
+  languageMenu: document.querySelector("#languageMenu"),
+  languageOptions: Array.from(document.querySelectorAll("[data-language-option]")),
   workspace: document.querySelector(".workspace"),
   sidePanel: document.querySelector(".side-panel"),
   fileDropZone: document.querySelector("#fileDropZone"),
@@ -30,6 +44,8 @@ const elements = {
   sourceQueueLabel: document.querySelector(".section-label"),
   queueHeaderLabel: document.querySelector(".queue-list-header span"),
   queueList: document.querySelector("#queueList"),
+  retryFailedButton: document.querySelector("#retryFailedButton"),
+  clearCompletedButton: document.querySelector("#clearCompletedButton"),
   clearQueueButton: document.querySelector("#clearQueueButton"),
   outputSettingLabel: document.querySelector(".setting-copy span"),
   outputDirText: document.querySelector("#outputDirText"),
@@ -48,6 +64,11 @@ const elements = {
 const translations = {
   zh: {
     waitingStatus: "等待文件",
+    colorLabel: "颜色",
+    colorSystem: "跟随系统",
+    colorLight: "浅色",
+    colorDark: "深色",
+    languageLabel: "语言",
     workspaceLabel: "Markdown 转换工作台",
     settingsLabel: "转换设置",
     sourceQueue: "源文件队列",
@@ -55,6 +76,8 @@ const translations = {
     fileMetaEmpty: "支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。",
     selectFile: "选择文件",
     queueTitle: "文件队列",
+    retryFailed: "重试失败",
+    clearCompleted: "清除成功",
     clearQueue: "清空队列",
     emptyQueue: "还没有文件。你可以点击选择文件，或把文件拖到上方区域。",
     outputLocation: "输出位置",
@@ -97,6 +120,11 @@ const translations = {
   },
   en: {
     waitingStatus: "Waiting for files",
+    colorLabel: "Color",
+    colorSystem: "System",
+    colorLight: "Light",
+    colorDark: "Dark",
+    languageLabel: "Language",
     workspaceLabel: "Markdown conversion workspace",
     settingsLabel: "Conversion settings",
     sourceQueue: "Source queue",
@@ -104,6 +132,8 @@ const translations = {
     fileMetaEmpty: "Supports PDF, Word, PowerPoint, Excel, HTML, CSV, JSON, XML, and TXT.",
     selectFile: "Choose files",
     queueTitle: "File queue",
+    retryFailed: "Retry failed",
+    clearCompleted: "Clear successful",
     clearQueue: "Clear queue",
     emptyQueue: "No files yet. Choose files or drop them into the area above.",
     outputLocation: "Output location",
@@ -151,6 +181,17 @@ const STATUS_LABEL_KEYS = {
   [QUEUE_STATUS.CONVERTING]: "converting",
   [QUEUE_STATUS.SUCCESS]: "success",
   [QUEUE_STATUS.ERROR]: "error",
+};
+
+const LANGUAGE_LABELS = {
+  zh: "中文",
+  en: "English",
+};
+
+const COLOR_LABEL_KEYS = {
+  system: "colorSystem",
+  light: "colorLight",
+  dark: "colorDark",
 };
 
 function t(key, values = {}) {
@@ -227,6 +268,8 @@ function setConverting(isConverting) {
   elements.convertButton.dataset.loading = String(isConverting);
   elements.selectFileButton.disabled = isConverting;
   elements.selectOutputButton.disabled = isConverting;
+  elements.retryFailedButton.disabled = isConverting || !state.queue.some((item) => item.supported && item.status === QUEUE_STATUS.ERROR);
+  elements.clearCompletedButton.disabled = isConverting || !state.queue.some((item) => item.status === QUEUE_STATUS.SUCCESS);
   elements.clearQueueButton.disabled = isConverting || state.queue.length === 0;
 }
 
@@ -318,11 +361,26 @@ function renderQueue() {
 
 function updateStaticText() {
   document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
+  elements.colorLabel.textContent = t("colorLabel");
+  elements.colorButtonText.textContent = t(COLOR_LABEL_KEYS[state.color] || "colorLight");
+  for (const option of elements.colorOptions) {
+    const selected = option.dataset.colorOption === state.color;
+    option.textContent = t(COLOR_LABEL_KEYS[option.dataset.colorOption] || "colorLight");
+    option.setAttribute("aria-selected", String(selected));
+  }
+  elements.languageLabel.textContent = t("languageLabel");
+  elements.languageButtonText.textContent = LANGUAGE_LABELS[state.language] || state.language;
+  for (const option of elements.languageOptions) {
+    const selected = option.dataset.languageOption === state.language;
+    option.setAttribute("aria-selected", String(selected));
+  }
   elements.workspace.setAttribute("aria-label", t("workspaceLabel"));
   elements.sidePanel.setAttribute("aria-label", t("settingsLabel"));
   elements.sourceQueueLabel.textContent = t("sourceQueue");
   elements.selectFileButton.textContent = t("selectFile");
   elements.queueHeaderLabel.textContent = t("queueTitle");
+  elements.retryFailedButton.textContent = t("retryFailed");
+  elements.clearCompletedButton.textContent = t("clearCompleted");
   elements.clearQueueButton.textContent = t("clearQueue");
   elements.outputSettingLabel.textContent = t("outputLocation");
   elements.selectOutputButton.textContent = t("selectFolder");
@@ -335,6 +393,8 @@ function updateConvertAvailability() {
   const hasOutput = Boolean(state.outputDir);
   const canStart = canStartQueue(state.queue);
   elements.convertButton.disabled = !canStart || !hasOutput || state.isConverting;
+  elements.retryFailedButton.disabled = state.isConverting || !state.queue.some((item) => item.supported && item.status === QUEUE_STATUS.ERROR);
+  elements.clearCompletedButton.disabled = state.isConverting || !state.queue.some((item) => item.status === QUEUE_STATUS.SUCCESS);
   elements.clearQueueButton.disabled = state.isConverting || state.queue.length === 0;
   elements.convertButtonText.textContent = state.isConverting ? t("convertingButton") : t("convert");
   elements.progressSummary.textContent = formatProgress(summary);
@@ -391,8 +451,8 @@ function getResolvedColor(color) {
 }
 
 function applyPreferences(preferences = {}) {
-  state.language = ["zh", "en"].includes(preferences.language) ? preferences.language : "zh";
-  state.color = ["system", "light", "dark"].includes(preferences.color) ? preferences.color : "light";
+  state.language = ["zh", "en"].includes(preferences.language) ? preferences.language : state.language;
+  state.color = ["system", "light", "dark"].includes(preferences.color) ? preferences.color : state.color;
   document.documentElement.dataset.theme = getResolvedColor(state.color);
   updateStaticText();
   renderAll();
@@ -408,6 +468,77 @@ function renderAll() {
 
 function renderOutputDirText() {
   elements.outputDirText.textContent = state.outputDir || t("noOutputDir");
+}
+
+function setPreferenceMenuOpen(switcher, button, menu, isOpen) {
+  button.setAttribute("aria-expanded", String(isOpen));
+
+  if (isOpen) {
+    menu.hidden = false;
+    window.requestAnimationFrame(() => {
+      switcher.dataset.open = "true";
+    });
+    return;
+  }
+
+  switcher.dataset.open = "false";
+  window.setTimeout(() => {
+    if (switcher.dataset.open !== "true") {
+      menu.hidden = true;
+    }
+  }, 180);
+}
+
+function setColorMenuOpen(isOpen) {
+  setPreferenceMenuOpen(elements.colorSwitcher, elements.colorButton, elements.colorMenu, isOpen);
+}
+
+function setLanguageMenuOpen(isOpen) {
+  setPreferenceMenuOpen(elements.languageSwitcher, elements.languageButton, elements.languageMenu, isOpen);
+}
+
+async function chooseColor(color) {
+  if (!["system", "light", "dark"].includes(color) || color === state.color) {
+    setColorMenuOpen(false);
+    return;
+  }
+
+  const previousPreferences = { language: state.language, color: state.color };
+  applyPreferences({ language: state.language, color: color });
+  setColorMenuOpen(false);
+
+  if (!window.markdownApp?.setPreferences) {
+    return;
+  }
+
+  try {
+    const preferences = await window.markdownApp.setPreferences({ color: color });
+    applyPreferences(preferences);
+  } catch {
+    applyPreferences(previousPreferences);
+  }
+}
+
+async function chooseLanguage(language) {
+  if (!["zh", "en"].includes(language) || language === state.language) {
+    setLanguageMenuOpen(false);
+    return;
+  }
+
+  const previousPreferences = { language: state.language, color: state.color };
+  applyPreferences({ language: language, color: state.color });
+  setLanguageMenuOpen(false);
+
+  if (!window.markdownApp?.setPreferences) {
+    return;
+  }
+
+  try {
+    const preferences = await window.markdownApp?.setPreferences({ language: language });
+    applyPreferences(preferences);
+  } catch {
+    applyPreferences(previousPreferences);
+  }
 }
 
 function getDraggedFilePaths(event) {
@@ -446,7 +577,7 @@ async function convertQueue() {
     const result = await runQueueConversion({
       queue: state.queue,
       outputDir: state.outputDir,
-      convertFile: (payload) => window.markdownApp.convertFile(payload),
+      convertFiles: (payload) => window.markdownApp.convertFiles(payload),
       onQueueChange: (nextQueue) => {
         state.queue = nextQueue;
         renderAll();
@@ -486,12 +617,61 @@ async function convertQueue() {
 }
 
 async function init() {
+  if (!window.markdownApp?.getAppState) {
+    applyPreferences({ language: state.language, color: state.color });
+    renderOutputDir("");
+    return;
+  }
+
   const appState = await window.markdownApp.getAppState();
   applyPreferences(appState.preferences);
   renderOutputDir(appState.outputDir);
 }
 
 elements.selectFileButton.addEventListener("click", chooseInputFiles);
+
+elements.colorButton.addEventListener("click", () => {
+  setLanguageMenuOpen(false);
+  setColorMenuOpen(elements.colorSwitcher.dataset.open !== "true");
+});
+
+for (const option of elements.colorOptions) {
+  option.addEventListener("click", () => {
+    chooseColor(option.dataset.colorOption);
+  });
+}
+
+elements.languageButton.addEventListener("click", () => {
+  setColorMenuOpen(false);
+  setLanguageMenuOpen(elements.languageSwitcher.dataset.open !== "true");
+});
+
+for (const option of elements.languageOptions) {
+  option.addEventListener("click", () => {
+    chooseLanguage(option.dataset.languageOption);
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (!elements.colorSwitcher.contains(event.target)) {
+    setColorMenuOpen(false);
+  }
+  if (!elements.languageSwitcher.contains(event.target)) {
+    setLanguageMenuOpen(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    setColorMenuOpen(false);
+    setLanguageMenuOpen(false);
+    if (elements.colorSwitcher.contains(document.activeElement)) {
+      elements.colorButton.focus();
+    } else {
+      elements.languageButton.focus();
+    }
+  }
+});
 
 elements.fileDropZone.addEventListener("dragenter", (event) => {
   event.preventDefault();
@@ -541,6 +721,26 @@ elements.clearQueueButton.addEventListener("click", () => {
   renderAll();
 });
 
+elements.retryFailedButton.addEventListener("click", () => {
+  if (state.isConverting) {
+    return;
+  }
+
+  state.queue = resetFailedQueueItems(state.queue);
+  clearResult();
+  renderAll();
+});
+
+elements.clearCompletedButton.addEventListener("click", () => {
+  if (state.isConverting) {
+    return;
+  }
+
+  state.queue = removeCompletedQueueItems(state.queue);
+  clearResult();
+  renderAll();
+});
+
 elements.selectOutputButton.addEventListener("click", async () => {
   const result = await window.markdownApp.selectOutputDirectory();
   if (result) {
@@ -566,7 +766,7 @@ elements.openLocationButton.addEventListener("click", async () => {
   }
 });
 
-window.markdownApp.onPreferencesChanged((preferences) => {
+window.markdownApp?.onPreferencesChanged?.((preferences) => {
   applyPreferences(preferences);
 });
 

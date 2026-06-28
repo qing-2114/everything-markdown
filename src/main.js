@@ -6,6 +6,7 @@ const {
   SUPPORTED_EXTENSIONS,
   getFileInfo,
   ensureWritableDirectory,
+  getAvailableOutputPaths,
   getAvailableOutputPath,
 } = require("./conversion-utils");
 const {
@@ -79,16 +80,14 @@ function getErrorMessage(error, fallback) {
   return error?.message || fallback;
 }
 
-function runConverter(inputPath, outputPath) {
+function runConverter(args) {
   return new Promise((resolve) => {
     const bundledConverterPath = getBundledConverterPath();
     const useBundledConverter = bundledConverterPath && fs.existsSync(bundledConverterPath);
     const command = useBundledConverter ? bundledConverterPath : getPythonCommand();
-    const args = useBundledConverter
-      ? ["--input", inputPath, "--output", outputPath]
-      : [path.join(__dirname, "..", "scripts", "convert.py"), "--input", inputPath, "--output", outputPath];
+    const converterArgs = useBundledConverter ? args : [path.join(__dirname, "..", "scripts", "convert.py"), ...args];
 
-    const child = spawn(command, args, {
+    const child = spawn(command, converterArgs, {
       windowsHide: true,
     });
 
@@ -128,6 +127,21 @@ function runConverter(inputPath, outputPath) {
   });
 }
 
+function runSingleConverter(inputPath, outputPath) {
+  return runConverter(["--input", inputPath, "--output", outputPath]);
+}
+
+function runBatchConverter(jobs) {
+  return runConverter(["--jobs-json", JSON.stringify(jobs)]);
+}
+
+function getSupportedFileFilters() {
+  return [
+    { name: "Supported files", extensions: Array.from(SUPPORTED_EXTENSIONS).map((ext) => ext.replace(".", "")) },
+    { name: "All Files", extensions: ["*"] },
+  ];
+}
+
 async function createWindow() {
   const preferences = getPreferences();
   nativeTheme.themeSource = preferences.color;
@@ -147,6 +161,11 @@ async function createWindow() {
     },
   });
 
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event) => {
+    event.preventDefault();
+  });
+
   await win.loadFile(path.join(__dirname, "renderer", "index.html"));
 }
 
@@ -158,7 +177,6 @@ function setPreference(name, value) {
 }
 
 function buildApplicationMenu() {
-  const preferences = getPreferences();
   const menu = Menu.buildFromTemplate([
     {
       label: "File",
@@ -176,47 +194,6 @@ function buildApplicationMenu() {
         { role: "delete" },
         { type: "separator" },
         { role: "selectAll" },
-        { type: "separator" },
-        {
-          label: "Language",
-          submenu: [
-            {
-              label: "中文",
-              type: "radio",
-              checked: preferences.language === "zh",
-              click: () => setPreference("language", "zh"),
-            },
-            {
-              label: "English",
-              type: "radio",
-              checked: preferences.language === "en",
-              click: () => setPreference("language", "en"),
-            },
-          ],
-        },
-        {
-          label: "Color",
-          submenu: [
-            {
-              label: "System",
-              type: "radio",
-              checked: preferences.color === "system",
-              click: () => setPreference("color", "system"),
-            },
-            {
-              label: "Light",
-              type: "radio",
-              checked: preferences.color === "light",
-              click: () => setPreference("color", "light"),
-            },
-            {
-              label: "Dark",
-              type: "radio",
-              checked: preferences.color === "dark",
-              click: () => setPreference("color", "dark"),
-            },
-          ],
-        },
         { type: "separator" },
         {
           label: "Uninstall Everything Markdown",
@@ -269,7 +246,7 @@ ipcMain.handle("get-files-info", (_event, filePaths) => {
 ipcMain.handle("select-input-files", async () => {
   const result = await dialog.showOpenDialog({
     properties: ["openFile", "multiSelections"],
-    filters: [{ name: "All Files", extensions: ["*"] }],
+    filters: getSupportedFileFilters(),
   });
 
   if (result.canceled || result.filePaths.length === 0) {
@@ -315,7 +292,7 @@ ipcMain.handle("convert-file", async (_event, payload) => {
     }
 
     const outputPath = getAvailableOutputPath(inputPath, outputDir);
-    return await runConverter(inputPath, outputPath);
+    return await runSingleConverter(inputPath, outputPath);
   } catch (error) {
     return {
       ok: false,
@@ -357,6 +334,76 @@ ipcMain.handle("open-output-location", async (_event, payload) => {
       ok: false,
       errorCode: "OPEN_OUTPUT_LOCATION_FAILED",
       message: getErrorMessage(error, "无法打开输出位置，请手动打开保存目录。"),
+    };
+  }
+});
+
+ipcMain.handle("convert-files", async (_event, payload) => {
+  try {
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    const outputDir = payload?.outputDir;
+
+    const directoryCheck = ensureWritableDirectory(outputDir);
+    if (!directoryCheck.ok) {
+      return {
+        ok: false,
+        results: items.map((item) => ({
+          inputPath: item?.inputPath || "",
+          ok: false,
+          errorCode: directoryCheck.errorCode,
+          message: directoryCheck.message,
+        })),
+      };
+    }
+
+    const validItems = [];
+    const results = [];
+    for (const item of items) {
+      const inputPath = item?.inputPath;
+      if (!inputPath || !fs.existsSync(inputPath)) {
+        results.push({ inputPath: inputPath || "", ok: false, errorCode: "INPUT_MISSING", message: "源文件不存在，请重新选择文件。" });
+        continue;
+      }
+
+      const fileInfo = getFileInfo(inputPath);
+      if (!fileInfo.supported) {
+        results.push({
+          inputPath,
+          ok: false,
+          errorCode: "UNSUPPORTED_FILE_TYPE",
+          message: `暂不支持 .${fileInfo.ext || "unknown"} 文件。`,
+        });
+        continue;
+      }
+
+      validItems.push(item);
+    }
+
+    const outputPaths = getAvailableOutputPaths(
+      validItems.map((item) => item.inputPath),
+      outputDir,
+    );
+    const jobs = validItems.map((item, index) => ({
+      input: item.inputPath,
+      output: outputPaths[index],
+    }));
+
+    if (jobs.length > 0) {
+      const converted = await runBatchConverter(jobs);
+      results.push(...(converted.results || []));
+    }
+
+    return { ok: results.some((item) => item.ok), results };
+  } catch (error) {
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    return {
+      ok: false,
+      results: items.map((item) => ({
+        inputPath: item?.inputPath || "",
+        ok: false,
+        errorCode: "CONVERSION_FAILED",
+        message: getErrorMessage(error, "转换失败，请检查文件、输出目录或 MarkItDown 环境。"),
+      })),
     };
   }
 });

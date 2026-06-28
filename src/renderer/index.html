@@ -15,7 +15,34 @@
             <h1 id="appTitle">everything-markdown</h1>
           </div>
         </div>
-        <div class="status-pill" id="statusPill" aria-live="polite">等待文件</div>
+        <div class="topbar-actions">
+          <div class="preference-stack">
+            <div class="preference-switcher" id="colorSwitcher">
+              <span id="colorLabel">颜色</span>
+              <button class="preference-button" id="colorButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span id="colorButtonText">浅色</span>
+                <span class="preference-arrow" aria-hidden="true"></span>
+              </button>
+              <div class="preference-menu" id="colorMenu" role="listbox" aria-labelledby="colorLabel" hidden>
+                <button class="preference-option" type="button" role="option" data-color-option="system" aria-selected="false">跟随系统</button>
+                <button class="preference-option" type="button" role="option" data-color-option="light" aria-selected="true">浅色</button>
+                <button class="preference-option" type="button" role="option" data-color-option="dark" aria-selected="false">深色</button>
+              </div>
+            </div>
+            <div class="preference-switcher language-switcher" id="languageSwitcher">
+              <span id="languageLabel">语言</span>
+              <button class="preference-button" id="languageButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span id="languageButtonText">中文</span>
+                <span class="preference-arrow" aria-hidden="true"></span>
+              </button>
+              <div class="preference-menu" id="languageMenu" role="listbox" aria-labelledby="languageLabel" hidden>
+                <button class="preference-option" type="button" role="option" data-language-option="zh" aria-selected="true">中文</button>
+                <button class="preference-option" type="button" role="option" data-language-option="en" aria-selected="false">English</button>
+              </div>
+            </div>
+          </div>
+          <div class="status-pill" id="statusPill" aria-live="polite">等待文件</div>
+        </div>
       </section>
 
       <section class="workspace" aria-label="Markdown 转换工作台">
@@ -34,7 +61,11 @@
             <div class="queue-list-shell">
               <div class="queue-list-header">
                 <span>文件队列</span>
-                <button class="text-button" id="clearQueueButton" type="button" disabled>清空队列</button>
+                <div class="queue-actions">
+                  <button class="text-button" id="retryFailedButton" type="button" disabled>重试失败</button>
+                  <button class="text-button" id="clearCompletedButton" type="button" disabled>清除成功</button>
+                  <button class="text-button" id="clearQueueButton" type="button" disabled>清空队列</button>
+                </div>
               </div>
               <div class="queue-list" id="queueList" aria-live="polite">
                 <p class="empty-queue">还没有文件。你可以点击选择文件，或把文件拖到上方区域。</p>
