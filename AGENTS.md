@@ -23,6 +23,8 @@
 - 每次更新代码并准备生成安装包时，必须同步更新 `package.json` 中的 `version`。
 - 每次完成代码更新、修复或可运行功能变更后，必须自动执行 `npm run dist:win` 重新生成 Windows 安装包。
 - 打包完成后必须检查 `release/` 中是否生成与当前版本一致的安装包，例如 `Everything Markdown Setup 0.1.3.exe`。
+- 每次生成新安装包后，必须删除 `release/` 中旧版本的 `Everything Markdown Setup *.exe` 和对应 `.exe.blockmap`，只保留当前版本安装包及其 blockmap。
+- 删除旧安装包前必须先确认当前 `package.json` 版本号和当前版本安装包文件都存在，避免误删最新产物。
 - 如果打包失败，必须明确说明失败原因和下一步，不要声称安装包已更新。
 - 版本号采用 `0.x.y` 递增规则：
   - 当前 `0.1.0` 更新一次后变为 `0.1.1`。
