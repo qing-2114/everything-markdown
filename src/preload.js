@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld("markdownApp", {
   selectOutputDirectory: () => ipcRenderer.invoke("select-output-directory"),
   convertFile: (payload) => ipcRenderer.invoke("convert-file", payload),
   openOutputLocation: (payload) => ipcRenderer.invoke("open-output-location", payload),
+  requestUninstall: () => ipcRenderer.invoke("request-uninstall"),
 });

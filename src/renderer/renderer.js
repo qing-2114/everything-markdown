@@ -30,6 +30,7 @@ const elements = {
   selectOutputButton: document.querySelector("#selectOutputButton"),
   convertButton: document.querySelector("#convertButton"),
   convertButtonText: document.querySelector("#convertButtonText"),
+  uninstallButton: document.querySelector("#uninstallButton"),
   hintText: document.querySelector("#hintText"),
   progressSummary: document.querySelector("#progressSummary"),
   resultPanel: document.querySelector("#resultPanel"),
@@ -114,6 +115,7 @@ function setConverting(isConverting) {
   elements.convertButton.dataset.loading = String(isConverting);
   elements.selectFileButton.disabled = isConverting;
   elements.selectOutputButton.disabled = isConverting;
+  elements.uninstallButton.disabled = isConverting;
   elements.clearQueueButton.disabled = isConverting || state.queue.length === 0;
 }
 
@@ -339,6 +341,21 @@ async function convertQueue() {
   }
 }
 
+async function requestUninstall() {
+  if (state.isConverting) {
+    return;
+  }
+
+  const result = await window.markdownApp.requestUninstall();
+  if (!result.ok) {
+    showResult({
+      label: "无法卸载软件",
+      path: result.message || "请从 Windows 设置中卸载 Everything Markdown。",
+      tone: "error",
+    });
+  }
+}
+
 async function init() {
   const appState = await window.markdownApp.getAppState();
   renderOutputDir(appState.outputDir);
@@ -403,6 +420,8 @@ elements.selectOutputButton.addEventListener("click", async () => {
 });
 
 elements.convertButton.addEventListener("click", convertQueue);
+
+elements.uninstallButton.addEventListener("click", requestUninstall);
 
 elements.openLocationButton.addEventListener("click", async () => {
   const outputPath = state.lastOutputPath || state.lastOutputDir;

@@ -8,6 +8,11 @@ const {
   ensureWritableDirectory,
   getAvailableOutputPath,
 } = require("./conversion-utils");
+const {
+  getWindowsUninstallerArgs,
+  getWindowsUninstallerPath,
+  isPathInsideDirectory,
+} = require("./uninstall-utils");
 
 const APP_ICON_PATH = path.join(__dirname, "assets", "app-icon.ico");
 
@@ -223,6 +228,53 @@ ipcMain.handle("open-output-location", async (_event, payload) => {
       message: getErrorMessage(error, "无法打开输出位置，请手动打开保存目录。"),
     };
   }
+});
+
+ipcMain.handle("request-uninstall", async () => {
+  if (process.platform !== "win32" || !app.isPackaged) {
+    return {
+      ok: false,
+      errorCode: "UNINSTALL_UNAVAILABLE",
+      message: "只有安装后的 Windows 版本可以从软件内卸载。",
+    };
+  }
+
+  const appDirectory = path.dirname(process.execPath);
+  const uninstallerPath = getWindowsUninstallerPath(process.execPath);
+
+  if (!isPathInsideDirectory(uninstallerPath, appDirectory) || !fs.existsSync(uninstallerPath)) {
+    return {
+      ok: false,
+      errorCode: "UNINSTALLER_MISSING",
+      message: "没有找到官方卸载程序，请从 Windows 设置中卸载 Everything Markdown。",
+    };
+  }
+
+  const activeWindow = BrowserWindow.getFocusedWindow();
+  const result = await dialog.showMessageBox(activeWindow, {
+    type: "warning",
+    buttons: ["取消", "卸载"],
+    defaultId: 0,
+    cancelId: 0,
+    title: "卸载 Everything Markdown",
+    message: "确定要卸载 Everything Markdown 吗？",
+    detail: "这只会启动软件自带的官方卸载程序，删除本软件的安装文件，不会删除你选择或转换过的文件。",
+    noLink: true,
+  });
+
+  if (result.response !== 1) {
+    return { ok: true, canceled: true };
+  }
+
+  const child = spawn(uninstallerPath, getWindowsUninstallerArgs(), {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: false,
+  });
+  child.unref();
+  app.quit();
+
+  return { ok: true, started: true };
 });
 
 app.whenReady().then(createWindow);

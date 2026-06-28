@@ -4,6 +4,11 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const packageJson = require("../package.json");
+const {
+  getWindowsUninstallerArgs,
+  getWindowsUninstallerPath,
+  isPathInsideDirectory,
+} = require("../src/uninstall-utils");
 
 const {
   SUPPORTED_EXTENSIONS,
@@ -167,4 +172,21 @@ test("builds Windows releases as an installer for faster app startup", () => {
   ]);
   assert.equal(nsisBuild.oneClick, false);
   assert.equal(nsisBuild.allowToChangeInstallationDirectory, true);
+});
+
+test("Windows installer uses a cancellable wizard", () => {
+  assert.equal(packageJson.build.nsis.oneClick, false);
+});
+
+test("resolves only the official uninstaller beside the installed app", () => {
+  const appExePath = "C:\\Users\\demo\\AppData\\Local\\Programs\\everything-markdown\\Everything Markdown.exe";
+  const uninstallerPath = getWindowsUninstallerPath(appExePath);
+
+  assert.equal(
+    uninstallerPath,
+    "C:\\Users\\demo\\AppData\\Local\\Programs\\everything-markdown\\Uninstall Everything Markdown.exe",
+  );
+  assert.equal(isPathInsideDirectory(uninstallerPath, path.dirname(appExePath)), true);
+  assert.equal(isPathInsideDirectory("C:\\Users\\demo\\Desktop\\notes.txt", path.dirname(appExePath)), false);
+  assert.deepEqual(getWindowsUninstallerArgs(), ["/currentuser", "/S"]);
 });

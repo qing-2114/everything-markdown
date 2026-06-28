@@ -465,6 +465,7 @@ h1 {
 
 .primary-button,
 .secondary-button,
+.danger-button,
 .convert-button,
 .icon-button,
 .text-button {
@@ -513,6 +514,17 @@ h1 {
 .icon-button:hover:not(:disabled) {
   border-color: rgba(23, 105, 224, 0.58);
   background: #f5f9ff;
+}
+
+.danger-button {
+  border: 1px solid rgba(180, 35, 24, 0.34);
+  color: var(--danger);
+  background: #ffffff;
+}
+
+.danger-button:hover:not(:disabled) {
+  border-color: rgba(180, 35, 24, 0.58);
+  background: var(--danger-soft);
 }
 
 .text-button {
@@ -715,6 +727,7 @@ h1 {
 
   .primary-button,
   .secondary-button,
+  .danger-button,
   .convert-button {
     width: 100%;
   }
