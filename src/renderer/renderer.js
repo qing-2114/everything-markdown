@@ -411,8 +411,8 @@ function getResolvedColor(color) {
 }
 
 function applyPreferences(preferences = {}) {
-  state.language = ["zh", "en"].includes(preferences.language) ? preferences.language : "zh";
-  state.color = ["system", "light", "dark"].includes(preferences.color) ? preferences.color : "light";
+  state.language = ["zh", "en"].includes(preferences.language) ? preferences.language : state.language;
+  state.color = ["system", "light", "dark"].includes(preferences.color) ? preferences.color : state.color;
   document.documentElement.dataset.theme = getResolvedColor(state.color);
   updateStaticText();
   renderAll();
@@ -520,8 +520,15 @@ elements.languageSelect.addEventListener("change", async () => {
     return;
   }
 
-  const preferences = await window.markdownApp.setPreferences({ language: language });
-  applyPreferences(preferences);
+  const previousPreferences = { language: state.language, color: state.color };
+  applyPreferences({ language: language, color: state.color });
+
+  try {
+    const preferences = await window.markdownApp.setPreferences({ language: language });
+    applyPreferences(preferences);
+  } catch {
+    applyPreferences(previousPreferences);
+  }
 });
 
 elements.fileDropZone.addEventListener("dragenter", (event) => {

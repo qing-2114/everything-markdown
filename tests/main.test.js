@@ -316,7 +316,7 @@ test("builds Windows releases as an installer for faster app startup", () => {
 });
 
 test("package version is bumped for the next installer name", () => {
-  assert.equal(packageJson.version, "0.1.2");
+  assert.equal(packageJson.version, "0.1.3");
   assert.equal(packageJson.build.win.artifactName, "Everything Markdown Setup ${version}.${ext}");
 });
 
@@ -364,6 +364,18 @@ test("shows language switching in the top bar instead of the Edit menu", () => {
   assert.match(html, /value="en"/);
   assert.match(rendererSource, /languageSelect/);
   assert.match(rendererSource, /setPreferences\(\{\s*language:/);
+});
+
+test("renderer applies language changes immediately and preserves partial preferences", () => {
+  const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "renderer.js"), "utf8");
+  const localApplyIndex = rendererSource.indexOf("applyPreferences({ language: language, color: state.color })");
+  const saveIndex = rendererSource.indexOf("window.markdownApp.setPreferences({ language: language })");
+
+  assert.ok(localApplyIndex > -1);
+  assert.ok(saveIndex > -1);
+  assert.ok(localApplyIndex < saveIndex);
+  assert.match(rendererSource, /preferences\.language\) \? preferences\.language : state\.language/);
+  assert.match(rendererSource, /preferences\.color\) \? preferences\.color : state\.color/);
 });
 
 test("main process filters supported input files and blocks unexpected navigation", () => {

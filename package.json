@@ -1,6 +1,6 @@
 {
   "name": "everything-markdown",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Windows desktop MVP for converting local files to Markdown with MarkItDown.",
   "main": "src/main.js",
   "scripts": {
