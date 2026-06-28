@@ -117,6 +117,35 @@ button:focus-visible,
   gap: 14px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 10px;
+}
+
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.language-switcher select {
+  min-height: 36px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.82);
+  font: inherit;
+}
+
 .brand-mark,
 .file-icon,
 .queue-file-icon {
@@ -696,7 +725,8 @@ html[data-theme="dark"] .queue-item {
 
 html[data-theme="dark"] .secondary-button,
 html[data-theme="dark"] .icon-button,
-html[data-theme="dark"] .danger-button {
+html[data-theme="dark"] .danger-button,
+html[data-theme="dark"] .language-switcher select {
   background: var(--surface);
 }
 
@@ -752,6 +782,10 @@ html[data-theme="dark"] .result-panel {
   .status-pill {
     max-width: 100%;
     justify-self: start;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
   }
 
   .conversion-grid {

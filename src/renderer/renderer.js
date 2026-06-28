@@ -23,6 +23,8 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  languageLabel: document.querySelector("#languageLabel"),
+  languageSelect: document.querySelector("#languageSelect"),
   workspace: document.querySelector(".workspace"),
   sidePanel: document.querySelector(".side-panel"),
   fileDropZone: document.querySelector("#fileDropZone"),
@@ -52,6 +54,7 @@ const elements = {
 const translations = {
   zh: {
     waitingStatus: "等待文件",
+    languageLabel: "语言",
     workspaceLabel: "Markdown 转换工作台",
     settingsLabel: "转换设置",
     sourceQueue: "源文件队列",
@@ -103,6 +106,7 @@ const translations = {
   },
   en: {
     waitingStatus: "Waiting for files",
+    languageLabel: "Language",
     workspaceLabel: "Markdown conversion workspace",
     settingsLabel: "Conversion settings",
     sourceQueue: "Source queue",
@@ -328,6 +332,8 @@ function renderQueue() {
 
 function updateStaticText() {
   document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
+  elements.languageLabel.textContent = t("languageLabel");
+  elements.languageSelect.value = state.language;
   elements.workspace.setAttribute("aria-label", t("workspaceLabel"));
   elements.sidePanel.setAttribute("aria-label", t("settingsLabel"));
   elements.sourceQueueLabel.textContent = t("sourceQueue");
@@ -506,6 +512,17 @@ async function init() {
 }
 
 elements.selectFileButton.addEventListener("click", chooseInputFiles);
+
+elements.languageSelect.addEventListener("change", async () => {
+  const language = elements.languageSelect.value;
+  if (!["zh", "en"].includes(language) || language === state.language) {
+    elements.languageSelect.value = state.language;
+    return;
+  }
+
+  const preferences = await window.markdownApp.setPreferences({ language: language });
+  applyPreferences(preferences);
+});
 
 elements.fileDropZone.addEventListener("dragenter", (event) => {
   event.preventDefault();

@@ -316,7 +316,7 @@ test("builds Windows releases as an installer for faster app startup", () => {
 });
 
 test("package version is bumped for the next installer name", () => {
-  assert.equal(packageJson.version, "0.1.1");
+  assert.equal(packageJson.version, "0.1.2");
   assert.equal(packageJson.build.win.artifactName, "Everything Markdown Setup ${version}.${ext}");
 });
 
@@ -344,14 +344,26 @@ test("shows the uninstall action near the top of the settings panel", () => {
   assert.equal(html.includes('id="uninstallButton"'), false);
 });
 
-test("adds preferences and uninstall actions to the Edit menu", () => {
+test("adds color preference and uninstall actions to the Edit menu", () => {
   const mainSource = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
 
   assert.match(mainSource, /label:\s*"Edit"/);
-  assert.match(mainSource, /label:\s*"Language"/);
+  assert.doesNotMatch(mainSource, /label:\s*"Language"/);
   assert.match(mainSource, /label:\s*"Color"/);
   assert.match(mainSource, /label:\s*"Uninstall Everything Markdown"/);
   assert.ok(mainSource.indexOf('label: "Uninstall Everything Markdown"') > mainSource.indexOf('label: "Color"'));
+});
+
+test("shows language switching in the top bar instead of the Edit menu", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "index.html"), "utf8");
+  const rendererSource = fs.readFileSync(path.join(__dirname, "..", "src", "renderer", "renderer.js"), "utf8");
+
+  assert.match(html, /class="topbar-actions"/);
+  assert.match(html, /id="languageSelect"/);
+  assert.match(html, /value="zh"/);
+  assert.match(html, /value="en"/);
+  assert.match(rendererSource, /languageSelect/);
+  assert.match(rendererSource, /setPreferences\(\{\s*language:/);
 });
 
 test("main process filters supported input files and blocks unexpected navigation", () => {

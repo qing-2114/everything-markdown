@@ -197,23 +197,6 @@ function buildApplicationMenu() {
         { role: "selectAll" },
         { type: "separator" },
         {
-          label: "Language",
-          submenu: [
-            {
-              label: "中文",
-              type: "radio",
-              checked: preferences.language === "zh",
-              click: () => setPreference("language", "zh"),
-            },
-            {
-              label: "English",
-              type: "radio",
-              checked: preferences.language === "en",
-              click: () => setPreference("language", "en"),
-            },
-          ],
-        },
-        {
           label: "Color",
           submenu: [
             {
