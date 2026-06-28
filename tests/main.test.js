@@ -316,7 +316,7 @@ test("builds Windows releases as an installer for faster app startup", () => {
 });
 
 test("package version is bumped for the next installer name", () => {
-  assert.equal(packageJson.version, "0.1.5");
+  assert.equal(packageJson.version, "0.1.6");
   assert.equal(packageJson.build.win.artifactName, "Everything Markdown Setup ${version}.${ext}");
 });
 

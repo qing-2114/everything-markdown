@@ -13,8 +13,8 @@ Everything Markdown 是一个 Windows 桌面工具，用来把本地文件转换
 - Windows 安装版启动更快，不再使用单文件便携包。
 - 安装时可以取消安装，也可以选择安装路径。
 - 安装器每次打开默认回到标准安装路径，不会自动沿用上次选择的路径。
-- `Edit > Language` 支持中文和英文，默认中文。
-- `Edit > Color` 支持 System、Light、Dark 三种主题模式。
+- 顶栏支持中文和英文切换，默认中文。
+- 顶栏支持 System、Light、Dark 三种主题模式，深色模式已优化显示层级和对比度。
 - `Edit > Uninstall Everything Markdown` 可以启动官方卸载器，并显示卸载进度。
 
 ## 支持格式
@@ -23,6 +23,13 @@ Everything Markdown 是一个 Windows 桌面工具，用来把本地文件转换
 PDF, DOCX, PPTX, XLSX, HTML, HTM, CSV, JSON, XML, TXT
 ```
 
+## 版本更新
+
+### 0.1.6
+
+- 优化深色模式显示，调整背景、面板、按钮、状态标签和格式标签的层级与对比度。
+- 更新 Windows 安装包版本为 `Everything Markdown Setup 0.1.6.exe`。
+
 ## 普通用户教程
 
 ### 1. 下载并安装
@@ -30,7 +37,7 @@ PDF, DOCX, PPTX, XLSX, HTML, HTM, CSV, JSON, XML, TXT
 在 GitHub Releases 中下载 Windows 安装版：
 
 ```text
-Everything Markdown Setup 0.1.0.exe
+Everything Markdown Setup 0.1.6.exe
 ```
 
 双击安装包后，按安装向导操作即可。安装过程中可以选择安装路径，也可以取消安装。
@@ -58,10 +65,10 @@ Everything Markdown Setup 0.1.0.exe
 
 ### 5. 切换语言和主题
 
-在顶部菜单中打开 `Edit`：
+在窗口右上角的顶栏控件中切换：
 
-- `Language`：选择中文或 English，主页面文字会立即切换。
-- `Color`：选择 System、Light 或 Dark。
+- `语言`：选择中文或 English，主页面文字会立即切换。
+- `颜色`：选择 System、Light 或 Dark。
 
 ### 6. 卸载软件
 
@@ -120,7 +127,7 @@ npm run dist:win
 构建完成后，产物会生成到 `release/` 目录：
 
 ```text
-release/Everything Markdown Setup 0.1.0.exe
+release/Everything Markdown Setup 0.1.6.exe
 ```
 
 `release/` 目录不会提交到 Git 仓库。发布 GitHub Release 时，只需要把安装包作为 Release 附件上传。
