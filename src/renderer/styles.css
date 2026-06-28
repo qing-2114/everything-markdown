@@ -25,6 +25,31 @@
   --shadow-soft: 0 10px 24px rgba(16, 32, 51, 0.08);
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101820;
+  --bg-top: #182436;
+  --surface: #172231;
+  --surface-muted: #1c2938;
+  --surface-soft: #223246;
+  --text: #eef5ff;
+  --text-soft: #c2d0e2;
+  --muted: #91a2b8;
+  --border: #314257;
+  --border-strong: #4c6179;
+  --accent: #6ea8ff;
+  --accent-strong: #9dc4ff;
+  --accent-soft: #17345d;
+  --danger: #ff8a80;
+  --danger-soft: #3a2020;
+  --warning: #ffd27a;
+  --warning-soft: #332917;
+  --success: #83e6b4;
+  --success-soft: #173526;
+  --shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -465,6 +490,7 @@ h1 {
 
 .primary-button,
 .secondary-button,
+.danger-button,
 .convert-button,
 .icon-button,
 .text-button {
@@ -509,10 +535,27 @@ h1 {
   background: #ffffff;
 }
 
+html[data-theme="dark"] body {
+  background:
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 54%, #0b1118 100%),
+    var(--bg);
+}
+
 .secondary-button:hover,
 .icon-button:hover:not(:disabled) {
   border-color: rgba(23, 105, 224, 0.58);
   background: #f5f9ff;
+}
+
+.danger-button {
+  border: 1px solid rgba(180, 35, 24, 0.34);
+  color: var(--danger);
+  background: #ffffff;
+}
+
+.danger-button:hover:not(:disabled) {
+  border-color: rgba(180, 35, 24, 0.58);
+  background: var(--danger-soft);
 }
 
 .text-button {
@@ -625,6 +668,35 @@ h1 {
   background: var(--danger-soft);
 }
 
+html[data-theme="dark"] .workspace {
+  background: rgba(18, 27, 38, 0.94);
+}
+
+html[data-theme="dark"] .drop-zone {
+  background:
+    linear-gradient(180deg, rgba(31, 44, 61, 0.94), rgba(24, 36, 50, 0.98)),
+    var(--surface-muted);
+}
+
+html[data-theme="dark"] .queue-list-shell,
+html[data-theme="dark"] .side-panel {
+  background: rgba(23, 34, 49, 0.9);
+}
+
+html[data-theme="dark"] .queue-item {
+  background: rgba(23, 34, 49, 0.78);
+}
+
+html[data-theme="dark"] .secondary-button,
+html[data-theme="dark"] .icon-button,
+html[data-theme="dark"] .danger-button {
+  background: var(--surface);
+}
+
+html[data-theme="dark"] .result-panel {
+  background: var(--surface-muted);
+}
+
 @keyframes button-sheen {
   to {
     transform: translateX(100%);
@@ -715,6 +787,7 @@ h1 {
 
   .primary-button,
   .secondary-button,
+  .danger-button,
   .convert-button {
     width: 100%;
   }

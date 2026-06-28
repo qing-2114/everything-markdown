@@ -12,6 +12,8 @@ const state = {
   queue: [],
   nextId: 1,
   outputDir: "",
+  language: "zh",
+  color: "light",
   isConverting: false,
   lastOutputPath: "",
   lastOutputDir: "",
@@ -19,12 +21,17 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  workspace: document.querySelector(".workspace"),
+  sidePanel: document.querySelector(".side-panel"),
   fileDropZone: document.querySelector("#fileDropZone"),
   fileIcon: document.querySelector("#fileIcon"),
   fileTitle: document.querySelector("#fileTitle"),
   fileMeta: document.querySelector("#fileMeta"),
+  sourceQueueLabel: document.querySelector(".section-label"),
+  queueHeaderLabel: document.querySelector(".queue-list-header span"),
   queueList: document.querySelector("#queueList"),
   clearQueueButton: document.querySelector("#clearQueueButton"),
+  outputSettingLabel: document.querySelector(".setting-copy span"),
   outputDirText: document.querySelector("#outputDirText"),
   selectFileButton: document.querySelector("#selectFileButton"),
   selectOutputButton: document.querySelector("#selectOutputButton"),
@@ -38,12 +45,118 @@ const elements = {
   openLocationButton: document.querySelector("#openLocationButton"),
 };
 
-const STATUS_LABELS = {
-  [QUEUE_STATUS.QUEUED]: "等待",
-  [QUEUE_STATUS.CONVERTING]: "转换中",
-  [QUEUE_STATUS.SUCCESS]: "成功",
-  [QUEUE_STATUS.ERROR]: "失败",
+const translations = {
+  zh: {
+    waitingStatus: "等待文件",
+    workspaceLabel: "Markdown 转换工作台",
+    settingsLabel: "转换设置",
+    sourceQueue: "源文件队列",
+    fileTitleEmpty: "选择或拖入多个文件开始转换",
+    fileMetaEmpty: "支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。",
+    selectFile: "选择文件",
+    queueTitle: "文件队列",
+    clearQueue: "清空队列",
+    emptyQueue: "还没有文件。你可以点击选择文件，或把文件拖到上方区域。",
+    outputLocation: "输出位置",
+    noOutputDir: "尚未选择保存位置",
+    selectFolder: "选择文件夹",
+    progressEmpty: "0 个文件等待转换",
+    convert: "转换为 Markdown",
+    convertingButton: "正在转换",
+    hintInitial: "先添加文件，再选择 Markdown 的保存位置。",
+    hintChooseFiles: "请选择或拖入需要转换的文件。",
+    hintChooseOutput: "请选择 Markdown 文件保存位置。",
+    hintConverting: "转换正在进行，失败项会保留原因，队列会继续处理后续文件。",
+    hintFinished: "队列已处理完成，可以继续添加文件。",
+    hintNoConvertible: "队列中没有可转换的待处理文件。",
+    hintReady: "准备就绪，将按队列顺序逐个转换。",
+    addedFiles: "已添加 {count} 个文件",
+    totalFiles: "共 {count} 个文件",
+    queuedCount: "{count} 个等待",
+    convertingCount: "{count} 个转换中",
+    successCount: "{count} 个成功",
+    errorCount: "{count} 个失败",
+    queued: "等待",
+    converting: "转换中",
+    success: "成功",
+    error: "失败",
+    remove: "移除",
+    markdownSaved: "Markdown 已保存。",
+    conversionFailed: "转换失败。",
+    convertingDetail: "正在转换为 Markdown。",
+    partialConverted: "部分文件已转换",
+    partialConvertedDetail: "{success} 个成功，{error} 个失败。",
+    allConverted: "全部文件已转换",
+    allConvertedDetail: "{success} 个 Markdown 文件已保存到输出目录。",
+    noneConverted: "没有文件转换成功",
+    noneConvertedDetail: "请查看队列中的失败原因。",
+    openOutputFailed: "无法打开输出目录",
+    openOutputFallback: "请手动打开保存位置。",
+    resultLabel: "转换结果",
+    openOutput: "打开输出目录",
+  },
+  en: {
+    waitingStatus: "Waiting for files",
+    workspaceLabel: "Markdown conversion workspace",
+    settingsLabel: "Conversion settings",
+    sourceQueue: "Source queue",
+    fileTitleEmpty: "Choose or drop files to start converting",
+    fileMetaEmpty: "Supports PDF, Word, PowerPoint, Excel, HTML, CSV, JSON, XML, and TXT.",
+    selectFile: "Choose files",
+    queueTitle: "File queue",
+    clearQueue: "Clear queue",
+    emptyQueue: "No files yet. Choose files or drop them into the area above.",
+    outputLocation: "Output location",
+    noOutputDir: "No save location selected",
+    selectFolder: "Choose folder",
+    progressEmpty: "0 files waiting",
+    convert: "Convert to Markdown",
+    convertingButton: "Converting",
+    hintInitial: "Add files, then choose where Markdown files should be saved.",
+    hintChooseFiles: "Choose or drop files to convert.",
+    hintChooseOutput: "Choose where Markdown files should be saved.",
+    hintConverting: "Conversion is running. Failed items keep their reason and the queue continues.",
+    hintFinished: "The queue is finished. You can add more files.",
+    hintNoConvertible: "There are no convertible queued files.",
+    hintReady: "Ready. Files will be converted in queue order.",
+    addedFiles: "{count} files added",
+    totalFiles: "{count} files total",
+    queuedCount: "{count} waiting",
+    convertingCount: "{count} converting",
+    successCount: "{count} successful",
+    errorCount: "{count} failed",
+    queued: "Waiting",
+    converting: "Converting",
+    success: "Success",
+    error: "Failed",
+    remove: "Remove",
+    markdownSaved: "Markdown saved.",
+    conversionFailed: "Conversion failed.",
+    convertingDetail: "Converting to Markdown.",
+    partialConverted: "Some files converted",
+    partialConvertedDetail: "{success} succeeded, {error} failed.",
+    allConverted: "All files converted",
+    allConvertedDetail: "{success} Markdown files saved to the output folder.",
+    noneConverted: "No files converted",
+    noneConvertedDetail: "Check the failed items in the queue.",
+    openOutputFailed: "Cannot open output folder",
+    openOutputFallback: "Open the save location manually.",
+    resultLabel: "Conversion result",
+    openOutput: "Open output folder",
+  },
 };
+
+const STATUS_LABEL_KEYS = {
+  [QUEUE_STATUS.QUEUED]: "queued",
+  [QUEUE_STATUS.CONVERTING]: "converting",
+  [QUEUE_STATUS.SUCCESS]: "success",
+  [QUEUE_STATUS.ERROR]: "error",
+};
+
+function t(key, values = {}) {
+  const template = translations[state.language]?.[key] || translations.zh[key] || key;
+  return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), template);
+}
 
 function setStatus(label, tone = "idle") {
   elements.statusPill.textContent = label;
@@ -90,21 +203,21 @@ function getStatusTone(summary) {
 
 function formatProgress(summary) {
   if (summary.total === 0) {
-    return "0 个文件等待转换";
+    return t("progressEmpty");
   }
 
-  const parts = [`共 ${summary.total} 个文件`];
+  const parts = [t("totalFiles", { count: summary.total })];
   if (summary.queued > 0) {
-    parts.push(`${summary.queued} 个等待`);
+    parts.push(t("queuedCount", { count: summary.queued }));
   }
   if (summary.converting > 0) {
-    parts.push(`${summary.converting} 个转换中`);
+    parts.push(t("convertingCount", { count: summary.converting }));
   }
   if (summary.success > 0) {
-    parts.push(`${summary.success} 个成功`);
+    parts.push(t("successCount", { count: summary.success }));
   }
   if (summary.error > 0) {
-    parts.push(`${summary.error} 个失败`);
+    parts.push(t("errorCount", { count: summary.error }));
   }
   return parts.join(" · ");
 }
@@ -135,15 +248,15 @@ function clearResult() {
 
 function getItemDetail(item) {
   if (item.status === QUEUE_STATUS.SUCCESS) {
-    return item.outputPath || "Markdown 已保存。";
+    return item.outputPath || t("markdownSaved");
   }
 
   if (item.status === QUEUE_STATUS.ERROR) {
-    return item.errorMessage || "转换失败。";
+    return item.errorMessage || t("conversionFailed");
   }
 
   if (item.status === QUEUE_STATUS.CONVERTING) {
-    return "正在转换为 Markdown。";
+    return t("convertingDetail");
   }
 
   return item.path;
@@ -155,7 +268,7 @@ function renderQueue() {
   if (state.queue.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty-queue";
-    empty.textContent = "还没有文件。你可以点击选择文件，或把文件拖到上方区域。";
+    empty.textContent = t("emptyQueue");
     elements.queueList.append(empty);
     return;
   }
@@ -184,12 +297,12 @@ function renderQueue() {
 
     const badge = document.createElement("span");
     badge.className = "queue-status";
-    badge.textContent = STATUS_LABELS[item.status] || item.status;
+    badge.textContent = t(STATUS_LABEL_KEYS[item.status] || "queued");
 
     const removeButton = document.createElement("button");
     removeButton.className = "icon-button";
     removeButton.type = "button";
-    removeButton.textContent = "移除";
+    removeButton.textContent = t("remove");
     removeButton.disabled = state.isConverting || item.status !== QUEUE_STATUS.QUEUED;
     removeButton.addEventListener("click", () => {
       state.queue = removeQueueItem(state.queue, item.id);
@@ -203,35 +316,46 @@ function renderQueue() {
   elements.queueList.append(fragment);
 }
 
+function updateStaticText() {
+  document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
+  elements.workspace.setAttribute("aria-label", t("workspaceLabel"));
+  elements.sidePanel.setAttribute("aria-label", t("settingsLabel"));
+  elements.sourceQueueLabel.textContent = t("sourceQueue");
+  elements.selectFileButton.textContent = t("selectFile");
+  elements.queueHeaderLabel.textContent = t("queueTitle");
+  elements.clearQueueButton.textContent = t("clearQueue");
+  elements.outputSettingLabel.textContent = t("outputLocation");
+  elements.selectOutputButton.textContent = t("selectFolder");
+  elements.resultLabel.textContent = t("resultLabel");
+  elements.openLocationButton.textContent = t("openOutput");
+}
+
 function updateConvertAvailability() {
   const summary = getQueueSummary(state.queue);
   const hasOutput = Boolean(state.outputDir);
   const canStart = canStartQueue(state.queue);
   elements.convertButton.disabled = !canStart || !hasOutput || state.isConverting;
   elements.clearQueueButton.disabled = state.isConverting || state.queue.length === 0;
-  elements.convertButtonText.textContent = state.isConverting ? "正在转换" : "转换为 Markdown";
+  elements.convertButtonText.textContent = state.isConverting ? t("convertingButton") : t("convert");
   elements.progressSummary.textContent = formatProgress(summary);
 
   if (state.isConverting) {
-    elements.hintText.textContent = "转换正在进行，失败项会保留原因，队列会继续处理后续文件。";
+    elements.hintText.textContent = t("hintConverting");
   } else if (summary.total === 0 && !hasOutput) {
-    elements.hintText.textContent = "先添加文件，再选择 Markdown 的保存位置。";
+    elements.hintText.textContent = t("hintInitial");
   } else if (summary.total === 0) {
-    elements.hintText.textContent = "请选择或拖入需要转换的文件。";
+    elements.hintText.textContent = t("hintChooseFiles");
   } else if (!hasOutput) {
-    elements.hintText.textContent = "请选择 Markdown 文件保存位置。";
+    elements.hintText.textContent = t("hintChooseOutput");
   } else if (!canStart && summary.success > 0) {
-    elements.hintText.textContent = "队列已处理完成，可以继续添加文件。";
+    elements.hintText.textContent = t("hintFinished");
   } else if (!canStart) {
-    elements.hintText.textContent = "队列中没有可转换的待处理文件。";
+    elements.hintText.textContent = t("hintNoConvertible");
   } else {
-    elements.hintText.textContent = "准备就绪，将按队列顺序逐个转换。";
+    elements.hintText.textContent = t("hintReady");
   }
 
-  setStatus(
-    summary.total === 0 ? "等待文件" : state.isConverting ? "转换中" : formatProgress(summary),
-    getStatusTone(summary),
-  );
+  setStatus(summary.total === 0 ? t("waitingStatus") : state.isConverting ? t("converting") : formatProgress(summary), getStatusTone(summary));
 }
 
 function renderDropZone() {
@@ -239,14 +363,14 @@ function renderDropZone() {
   const firstQueued = getNextQueuedItem(state.queue);
 
   if (summary.total === 0) {
-    elements.fileTitle.textContent = "选择或拖入多个文件开始转换";
-    elements.fileMeta.textContent = "支持 PDF、Word、PowerPoint、Excel、HTML、CSV、JSON、XML 和 TXT。";
+    elements.fileTitle.textContent = t("fileTitleEmpty");
+    elements.fileMeta.textContent = t("fileMetaEmpty");
     setFileIcon("FILES", "empty");
     setDropZoneState("empty");
     return;
   }
 
-  elements.fileTitle.textContent = `已添加 ${summary.total} 个文件`;
+  elements.fileTitle.textContent = t("addedFiles", { count: summary.total });
   elements.fileMeta.textContent = formatProgress(summary);
   setFileIcon(firstQueued ? getFileIconLabel(firstQueued) : "DONE", summary.error > 0 && summary.success === 0 ? "error" : "ready");
   setDropZoneState(summary.error > 0 && summary.success === 0 && summary.queued === 0 ? "error" : "ready");
@@ -254,14 +378,36 @@ function renderDropZone() {
 
 function renderOutputDir(outputDir) {
   state.outputDir = outputDir || "";
-  elements.outputDirText.textContent = state.outputDir || "尚未选择保存位置";
+  elements.outputDirText.textContent = state.outputDir || t("noOutputDir");
+  renderAll();
+}
+
+function getResolvedColor(color) {
+  if (color !== "system") {
+    return color;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyPreferences(preferences = {}) {
+  state.language = ["zh", "en"].includes(preferences.language) ? preferences.language : "zh";
+  state.color = ["system", "light", "dark"].includes(preferences.color) ? preferences.color : "light";
+  document.documentElement.dataset.theme = getResolvedColor(state.color);
+  updateStaticText();
   renderAll();
 }
 
 function renderAll() {
+  updateStaticText();
   renderDropZone();
   renderQueue();
+  renderOutputDirText();
   updateConvertAvailability();
+}
+
+function renderOutputDirText() {
+  elements.outputDirText.textContent = state.outputDir || t("noOutputDir");
 }
 
 function getDraggedFilePaths(event) {
@@ -318,22 +464,22 @@ async function convertQueue() {
   const summary = getQueueSummary(state.queue);
   if (summary.success > 0 && summary.error > 0) {
     showResult({
-      label: "部分文件已转换",
-      path: `${summary.success} 个成功，${summary.error} 个失败。`,
+      label: t("partialConverted"),
+      path: t("partialConvertedDetail", { success: summary.success, error: summary.error }),
       tone: "warning",
       canOpen: Boolean(state.lastOutputPath),
     });
   } else if (summary.success > 0) {
     showResult({
-      label: "全部文件已转换",
-      path: `${summary.success} 个 Markdown 文件已保存到输出目录。`,
+      label: t("allConverted"),
+      path: t("allConvertedDetail", { success: summary.success }),
       tone: "success",
       canOpen: Boolean(state.lastOutputPath),
     });
   } else if (summary.error > 0) {
     showResult({
-      label: "没有文件转换成功",
-      path: "请查看队列中的失败原因。",
+      label: t("noneConverted"),
+      path: t("noneConvertedDetail"),
       tone: "error",
     });
   }
@@ -341,8 +487,8 @@ async function convertQueue() {
 
 async function init() {
   const appState = await window.markdownApp.getAppState();
+  applyPreferences(appState.preferences);
   renderOutputDir(appState.outputDir);
-  renderAll();
 }
 
 elements.selectFileButton.addEventListener("click", chooseInputFiles);
@@ -413,10 +559,20 @@ elements.openLocationButton.addEventListener("click", async () => {
   const result = await window.markdownApp.openOutputLocation({ outputPath });
   if (!result.ok) {
     showResult({
-      label: "无法打开输出目录",
-      path: result.message || "请手动打开保存位置。",
+      label: t("openOutputFailed"),
+      path: result.message || t("openOutputFallback"),
       tone: "error",
     });
+  }
+});
+
+window.markdownApp.onPreferencesChanged((preferences) => {
+  applyPreferences(preferences);
+});
+
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (state.color === "system") {
+    applyPreferences({ language: state.language, color: state.color });
   }
 });
 
