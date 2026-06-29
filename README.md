@@ -2,6 +2,8 @@
 
 Everything Markdown 是一个 Windows 桌面工具，用来把本地文件转换成 Markdown。应用基于 Electron 构建，转换能力由 Microsoft MarkItDown 提供。
 
+当前最新版本：`0.1.6`。Windows 安装包请从 [GitHub Releases](https://github.com/qing-2114/everything-markdown/releases) 下载。
+
 ## 功能
 
 - 支持将常见办公文档和文本类文件转换为 `.md` 文件。
@@ -34,7 +36,7 @@ PDF, DOCX, PPTX, XLSX, HTML, HTM, CSV, JSON, XML, TXT
 
 ### 1. 下载并安装
 
-在 GitHub Releases 中下载 Windows 安装版：
+在 [GitHub Releases](https://github.com/qing-2114/everything-markdown/releases) 中下载 Windows 安装版：
 
 ```text
 Everything Markdown Setup 0.1.6.exe
@@ -130,7 +132,7 @@ npm run dist:win
 release/Everything Markdown Setup 0.1.6.exe
 ```
 
-`release/` 目录不会提交到 Git 仓库。发布 GitHub Release 时，只需要把安装包作为 Release 附件上传。
+`release/` 目录不会提交到 Git 仓库。发布 GitHub Release 时，只需要把安装包作为 Release 附件上传；Source code 压缩包由 GitHub 自动生成，手动上传的 Assets 只保留当前版本安装包即可。
 
 ## 常见问题
 
